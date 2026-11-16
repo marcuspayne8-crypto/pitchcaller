@@ -339,7 +339,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.9";
+  var VERSION = "v2.0";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -382,7 +382,11 @@
   PITCHES.forEach(function(p){
     var b = document.createElement("button");
     b.className = "pitch"; b.textContent = p.label;
-    b.addEventListener("click", function(){ state.pitch = (state.pitch===p.id) ? null : p.id; render(); });
+    b.addEventListener("click", function(){
+      clearUnsentCustom();
+      state.pitch = (state.pitch===p.id) ? null : p.id;
+      render();
+    });
     $("pitches").appendChild(b); pitchBtns[p.id] = b;
   });
   var locBtns = {};
@@ -406,6 +410,12 @@
     return t;
   }
   function messageText(){ return ($("customMsg").value || "").replace(/\s+/g, " ").trim(); }
+  function clearUnsentCustom(){
+    if(state.playing) return;
+    if(rec.active){ rec.discard = true; stopRecording(); }
+    $("customMsg").value = "";
+    discardNote();
+  }
   function noteLabel(note){ return note ? "[voice note " + note.secs + "s]" : ""; }
   function callParts(){
     var parts = [];
@@ -890,6 +900,7 @@
         $("lastSent").innerHTML = "Last sent: <b></b> at " + hh + ":" + mm;
         $("lastSent").querySelector("b").textContent = text;
         state.pitch = null; state.loc = null;
+        if(msg || note){ $("customMsg").value = ""; discardNote(); }
       }
       render();
     }, {message: msg, note: note});
