@@ -77,23 +77,49 @@ const ASSETS = [
   "clips/voices/cowboy/middle-outside.mp3",
   "clips/voices/cowboy/splitfinger.mp3"
 ];
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+
+function isShell(url){
+  var path = new URL(url).pathname;
+  return /\/$/.test(path) || /\/index\.html$/.test(path) || /\/version\.js$/.test(path) || /\/sw\.js$/.test(path);
+}
+
+self.addEventListener("install", function(e){
+  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS); }).then(function(){ return self.skipWaiting(); }));
 });
-self.addEventListener("message", e => {
-  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+
+self.addEventListener("activate", function(e){
+  e.waitUntil(caches.keys().then(function(keys){
+    return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
+  }).then(function(){ return self.clients.claim(); }));
 });
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
-});
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
+
+self.addEventListener("fetch", function(e){
+  if(e.request.method !== "GET") return;
+  if(isShell(e.request.url)){
+    e.respondWith(
+      fetch(new Request(e.request, {cache: "no-store"})).then(function(res){
+        if(res && res.ok){
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+        }
+        return res;
+      }).catch(function(){
+        return caches.match(e.request, {ignoreSearch: true}).then(function(hit){
+          return hit || caches.match("index.html");
+        });
+      })
+    );
+    return;
+  }
   e.respondWith(
-    caches.match(e.request, {ignoreSearch: true}).then(hit => hit || fetch(e.request).then(res => {
-      if (res.ok && new URL(e.request.url).origin === location.origin) {
-        const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy));
-      }
-      return res;
-    }).catch(() => caches.match("index.html")))
+    caches.match(e.request, {ignoreSearch: true}).then(function(hit){
+      return hit || fetch(e.request).then(function(res){
+        if(res && res.ok && new URL(e.request.url).origin === location.origin){
+          var copy = res.clone();
+          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+        }
+        return res;
+      }).catch(function(){ return caches.match("index.html"); });
+    })
   );
 });

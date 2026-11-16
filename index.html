@@ -73,23 +73,27 @@
   header{
     display:flex; align-items:center; gap:8px; min-width:0; height:44px; overflow:hidden;
   }
-  .mark{width:32px; height:32px; flex:none; border-radius:50%; display:block;}
-  h1{margin:0; min-width:0; flex:1; display:flex; align-items:baseline; gap:6px; overflow:hidden;}
+  .mark{display:none;}
+  h1{margin:0; min-width:0; flex:1; display:flex; align-items:baseline; gap:5px; overflow:hidden;}
   .salt{
     font-family:"Yellowtail","Segoe Script","Brush Script MT",cursive;
-    font-size:clamp(26px, 7vw, 34px); font-weight:400; line-height:1; color:#fff;
-    -webkit-text-stroke:1.4px var(--orange); paint-order:stroke fill; white-space:nowrap;
+    font-size:clamp(22px, 6vw, 32px); font-weight:400; line-height:1; color:#fff;
+    -webkit-text-stroke:1.3px var(--orange); paint-order:stroke fill; white-space:nowrap;
   }
   .phantoms{
-    font-size:10px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase;
+    font-size:clamp(10px, 2.7vw, 13px); font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
     color:var(--muted); white-space:nowrap;
   }
-  #aaBtn{
-    width:36px; height:32px; flex:none; border-radius:10px; padding:0;
+  #msgBtn{
+    height:32px; flex:none; border-radius:10px; padding:0 8px;
+    display:flex; align-items:center; gap:4px;
     background:var(--surface); color:var(--orange); border:1px solid var(--orange);
-    font-weight:800; font-size:14px; letter-spacing:-0.03em;
+    font-weight:800; font-size:13px;
   }
-  #aaBtn.has{background:var(--orange); color:var(--ink);}
+  #msgBtn svg{display:block; flex:none;}
+  #msgBtn .msgFull{display:none;}
+  #msgBtn.has{background:var(--orange); color:var(--ink);}
+  #msgBtn.has svg{fill:var(--ink);}
   #appVersion{font-size:11px; font-weight:800; color:var(--muted); letter-spacing:0.04em; flex:none;}
   #updateBtn{
     flex:none; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -213,7 +217,25 @@
     box-shadow:0 -16px 40px rgba(0,0,0,.45);
   }
   #msgSheet.open #msgPanel{transform:translateY(0);}
-  #msgPanel h2{margin:0; font-size:20px; font-weight:800;}
+  #msgPanel{overflow:auto; -webkit-overflow-scrolling:touch;}
+  .sheetHead{
+    position:sticky; top:0; z-index:3;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:#f4f4f6; padding:4px 0 8px;
+  }
+  .sheetHead h2{margin:0; font-size:20px; font-weight:800;}
+  .sheetX{
+    height:36px; min-width:64px; padding:0 12px; border-radius:999px;
+    background:#fff; color:#17171a; border:1px solid #d9d9e0; font-weight:800; font-size:14px;
+  }
+  #msgPanel .sheetHead{background:#1A1A1A; margin:0 -16px; padding:4px 16px 8px;}
+  #msgPanel .sheetHead h2{color:#F5F5F5; font-size:20px;}
+  #msgPanel .sheetX{background:#2A2A2A; color:#F5F5F5; border-color:#4A4A4A;}
+  .group{display:flex; flex-direction:column; gap:4px;}
+  .group h3{
+    margin:6px 0 0; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#5e5e68;
+  }
+  #updateNow{background:#17171a; color:#fff; border-color:#17171a;}
   #msgPanel .handle{background:#4A4A4A;}
   #composer{display:flex; flex-direction:column; gap:8px;}
   #msgRow{display:flex; align-items:center; gap:8px;}
@@ -245,7 +267,7 @@
   }
   #voiceBar::-webkit-scrollbar{display:none;}
   .voicePill{
-    flex:none; padding:8px 12px; border-radius:999px; font-size:14px; font-weight:750;
+    flex:none; padding:6px 8px; border-radius:999px; font-size:12px; font-weight:750;
     background:#fff; color:#17171a; border:1px solid #d9d9e0;
   }
   .voicePill.on{background:var(--orange); color:var(--ink); border-color:var(--orange);}
@@ -259,11 +281,11 @@
   .sheet{
     background:#f4f4f6; color:#17171a;
     border-radius:28px 28px 0 0;
-    padding:8px 22px calc(20px + env(safe-area-inset-bottom));
+    padding:6px 16px calc(12px + env(safe-area-inset-bottom));
     width:min(560px, 100%);
-    max-height:min(88dvh, 760px);
+    max-height:min(92dvh, 760px);
     overflow:auto;
-    display:flex; flex-direction:column; gap:14px;
+    display:flex; flex-direction:column; gap:6px;
     transform:translateY(105%);
     transition:transform .32s cubic-bezier(.2,.8,.2,1);
     box-shadow:0 -16px 50px rgba(0,0,0,.4);
@@ -272,21 +294,22 @@
   #settings.open .sheet{transform:translateY(0);}
   .handle{width:42px; height:5px; border-radius:99px; background:#c9c9d0; margin:6px auto 2px; flex:none;}
   .sheet h2{margin:0; font-size:22px; font-weight:750; letter-spacing:-0.02em;}
-  .row{display:flex; flex-direction:column; gap:6px;}
-  .row label{font-weight:700; font-size:16px;}
+  .row{display:flex; flex-direction:column; gap:2px;}
+  .row label{font-weight:700; font-size:14px;}
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .row .hint{font-size:13px; color:#5e5e68; line-height:1.4;}
   .seg{display:flex; gap:8px;}
   .sheet button{background:#fff; color:#17171a; border:1px solid #d9d9e0; border-radius:14px; font-weight:700;}
-  .seg button{flex:1; padding:12px; font-size:15px;}
+  .seg button{flex:1; padding:8px; font-size:14px;}
   .sheet .sel{background:var(--orange)!important; color:var(--ink)!important; border-color:var(--orange)!important; box-shadow:none;}
-  input[type=range]{width:100%; height:36px; accent-color:var(--orange);}
+  input[type=range]{width:100%; height:22px; accent-color:var(--orange); margin:0;}
   .sheetBtns{display:flex; gap:10px; flex-wrap:wrap;}
-  .sheetBtns button{flex:1; padding:14px; font-size:16px;}
+  .sheetBtns button{flex:1; padding:10px; font-size:15px;}
   #closeSettings{background:var(--orange); color:var(--ink); border-color:var(--orange);}
   .toggle{display:flex; align-items:center; gap:10px; font-weight:700;}
   .toggle input{width:24px; height:24px; accent-color:var(--orange);}
   select{
-    font:inherit; font-size:16px; height:44px; border-radius:12px;
+    font:inherit; font-size:15px; height:36px; border-radius:10px;
     border:1px solid #d9d9e0; background:#fff; color:#17171a; padding:0 10px;
   }
   @media (min-width: 768px) and (orientation: portrait){
@@ -295,7 +318,10 @@
     .loc{font-size:16px;}
     .locFull{display:inline;}
     .locShort{display:none;}
+    .mark{display:block; width:36px; height:36px; flex:none; border-radius:50%;}
     .phantoms{font-size:12px;}
+    #msgBtn .msgShort{display:none;}
+    #msgBtn .msgFull{display:inline;}
   }
   @media (min-width: 900px) and (min-height: 600px) and (orientation: landscape){
     body{padding:20px;}
@@ -317,6 +343,9 @@
     }
     .pitch{font-size:18px;}
     .loc{font-size:16px;}
+    .mark{display:block; width:36px; height:36px; flex:none; border-radius:50%;}
+    #msgBtn .msgShort{display:none;}
+    #msgBtn .msgFull{display:inline;}
     .locFull{display:inline;}
     .locShort{display:none;}
     #txBanner,#micBanner{top:52px; left:0; right:auto; width:42%;}
@@ -330,10 +359,13 @@
   <div id="txBanner" hidden>LIVE TO CATCHER</div>
   <div id="micBanner" hidden>MIC OFF</div>
   <header>
-    <img class="mark" src="icons/sl-logo.png" width="64" height="64" alt="Salt Lake">
+    <img class="mark" src="icons/sl-logo.png" width="64" height="64" alt="">
     <h1><span class="salt">Salt Lake</span><span class="phantoms">Phantoms</span></h1>
-    <button type="button" id="aaBtn" aria-label="Message">Aa</button>
     <span id="appVersion"></span>
+    <button type="button" id="msgBtn" aria-label="Message">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+      <span class="msgShort">Msg</span><span class="msgFull">Message</span>
+    </button>
     <button type="button" id="updateBtn" hidden>Update</button>
     <button type="button" id="settingsBtn" aria-label="Settings">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -363,8 +395,10 @@
 
 <div id="msgSheet" role="dialog" aria-modal="true" aria-labelledby="msgTitle">
   <div id="msgPanel">
-    <div class="handle" aria-hidden="true"></div>
-    <h2 id="msgTitle">Message</h2>
+    <div class="sheetHead">
+      <h2 id="msgTitle">Message</h2>
+      <button type="button" class="sheetX" id="closeMsg" aria-label="Close">Done</button>
+    </div>
     <div id="composer">
       <div id="msgRow">
         <input id="customMsg" type="text" inputmode="text" enterkeyhint="done" maxlength="160" autocomplete="off" autocapitalize="sentences" placeholder="Custom message" aria-label="Custom message">
@@ -390,91 +424,96 @@
       <button type="button" id="addMsg">Add to next call</button>
       <button type="button" id="sendMsgNow" disabled>Send message now</button>
     </div>
-    <button type="button" id="closeMsg">Done</button>
   </div>
 </div>
 
 <div id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-  <div class="sheet">
-    <div class="handle" aria-hidden="true"></div>
-    <h2 id="settingsTitle">Settings</h2>
-
-    <div class="row">
-      <label for="clipVoiceSel">Clip voice</label>
-      <div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
-      <select id="clipVoiceSel"></select>
-      <div class="hint">Pitch and location recordings. Typed messages and voice notes stay the same.</div>
+  <div class="sheet" id="settingsSheet">
+    <div class="sheetHead">
+      <h2 id="settingsTitle">Settings</h2>
+      <button type="button" class="sheetX" id="closeSettings" aria-label="Close">Done</button>
     </div>
 
-    <div class="row">
-      <label>VOX pre-roll sound</label>
-      <div class="seg" id="prerollType">
-        <button type="button" data-v="off">Off</button>
-        <button type="button" data-v="noise">Soft noise</button>
-        <button type="button" data-v="tone">Soft tone</button>
+    <section class="group">
+      <h3>Voice</h3>
+      <div class="row">
+        <label>Pitch voice</label>
+        <div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
       </div>
-      <div class="hint">A short sound before the call so the radio's VOX keys up before the first word. Without it, the radio may cut off the start of "Fastball".</div>
-    </div>
+      <div class="row">
+        <label for="voiceSel">Message voice</label>
+        <select id="voiceSel"></select>
+      </div>
+      <div class="split">
+        <div class="row">
+          <label>Rate: <span id="rateVal"></span></label>
+          <input type="range" id="speechRate" min="0.7" max="1.3" step="0.1">
+        </div>
+        <div class="row">
+          <label>Volume: <span id="volVal"></span>%</label>
+          <input type="range" id="vol" min="10" max="150" step="5">
+        </div>
+      </div>
+    </section>
 
-    <div class="row">
-      <label>Pre-roll length: <span id="prerollLenVal"></span> ms</label>
-      <input type="range" id="prerollLen" min="100" max="1000" step="50">
-    </div>
+    <section class="group">
+      <h3>Calls</h3>
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="repeat"> Say each call twice</label>
+      </div>
+      <div class="row">
+        <label>Gap between pitch and location: <span id="gapVal"></span> ms</label>
+        <input type="range" id="gap" min="0" max="600" step="20">
+      </div>
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="wake"> Keep screen awake</label>
+      </div>
+    </section>
 
-    <div class="row">
-      <label>Pre-roll level: <span id="prerollLevelVal"></span>%</label>
-      <input type="range" id="prerollLevel" min="1" max="60" step="1">
-      <div class="hint">Raise this if the radio still clips the first word. Lower it if the catcher hears too much hiss.</div>
-    </div>
+    <section class="group">
+      <h3>Hold to Talk</h3>
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="talkToggle"> Tap to talk</label>
+      </div>
+      <div class="row">
+        <label class="toggle"><input type="checkbox" id="talkBeep"> Beep when talk starts</label>
+        <div class="hint">Off by default. The catcher hears it.</div>
+      </div>
+    </section>
 
-    <div class="row">
-      <label>Gap between pitch and location: <span id="gapVal"></span> ms</label>
-      <input type="range" id="gap" min="0" max="600" step="20">
-    </div>
+    <section class="group">
+      <h3>Radio / VOX</h3>
+      <div class="row">
+        <label>Call pre-roll</label>
+        <div class="seg" id="prerollType">
+          <button type="button" data-v="off">Off</button>
+          <button type="button" data-v="noise">Noise</button>
+          <button type="button" data-v="tone">Tone</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="row">
+          <label>Length: <span id="prerollLenVal"></span> ms</label>
+          <input type="range" id="prerollLen" min="100" max="1000" step="50">
+        </div>
+        <div class="row">
+          <label>Level: <span id="prerollLevelVal"></span>%</label>
+          <input type="range" id="prerollLevel" min="1" max="60" step="1">
+        </div>
+      </div>
+      <div class="sheetBtns">
+        <button type="button" id="testBtn">Test radio</button>
+      </div>
+    </section>
 
-    <div class="row">
-      <label>Voice volume: <span id="volVal"></span>%</label>
-      <input type="range" id="vol" min="10" max="150" step="5">
-    </div>
-
-    <div class="row">
-      <label for="voiceSel">Message voice</label>
-      <select id="voiceSel"></select>
-      <div class="hint">Spoken on SEND after the pitch. English is used when it is available.</div>
-    </div>
-
-    <div class="row">
-      <label>Speech rate: <span id="rateVal"></span></label>
-      <input type="range" id="speechRate" min="0.7" max="1.3" step="0.1">
-    </div>
-
-    <div class="row">
-      <label class="toggle"><input type="checkbox" id="repeat"> Say each call twice</label>
-      <div class="hint">Plays the pitch, location, and typed message again. A voice note plays once.</div>
-    </div>
-
-    <div class="row">
-      <label class="toggle"><input type="checkbox" id="wake"> Keep screen awake</label>
-    </div>
-
-    <div class="row">
-      <label class="toggle"><input type="checkbox" id="talkBeep"> Talk beep</label>
-      <div class="hint">A short soft beep when Hold to Talk starts, so the radio keys up. Off by default. The catcher hears it, so leave it off unless you need it.</div>
-    </div>
-
-    <div class="row">
-      <label class="toggle"><input type="checkbox" id="talkToggle"> Tap to talk</label>
-      <div class="hint">Off by default. When on, tap Hold to Talk to start and tap again to stop.</div>
-    </div>
-
-    <div class="sheetBtns">
-      <button type="button" id="testBtn">Test radio (plays "Fastball")</button>
-      <button type="button" id="resetBtn">Reset defaults</button>
-    </div>
-    <div class="sheetBtns">
-      <button type="button" id="closeSettings">Done</button>
-    </div>
-    <div class="hint" id="version"></div>
+    <section class="group">
+      <h3>About</h3>
+      <div class="hint" id="version"></div>
+      <div class="sheetBtns">
+        <button type="button" id="updateNow">Update now</button>
+        <button type="button" id="resetBtn">Reset defaults</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -505,7 +544,7 @@
     {id:"calm", label:"Calm"},
     {id:"cowboy", label:"Cowboy"}
   ];
-  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.3";
+  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.4";
   var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false, talkToggle:false};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
@@ -603,7 +642,7 @@
     if(nowBtn) nowBtn.disabled = state.playing || rec.active || !(messageText() || state.note);
     $("msgClear").hidden = !$("customMsg").value;
     $("noteRow").hidden = !state.note;
-    var aa = $("aaBtn");
+    var aa = $("msgBtn");
     if(aa) aa.classList.toggle("has", !!(messageText() || state.note));
     if(state.note){
       var noteLabelText = "Voice note " + state.note.secs + "s";
@@ -737,15 +776,10 @@
     b.className = "voicePill";
     b.dataset.voice = v.id;
     b.setAttribute("role", "radio");
-    b.textContent = v.label;
+    b.textContent = {marcus:"Marcus", narrator:"Narrator", announcer:"Announcer", calm:"Calm", cowboy:"Cowboy"}[v.id] || v.label;
     b.addEventListener("click", function(){ selectClipVoice(v.id); });
     $("voiceBar").appendChild(b);
-    var o = document.createElement("option");
-    o.value = v.id;
-    o.textContent = v.label;
-    $("clipVoiceSel").appendChild(o);
   });
-  $("clipVoiceSel").addEventListener("change", function(){ selectClipVoice(this.value); });
   createCtx(); // decode clips right away; output unlocks on first tap
 
   function makePreroll(seconds, type, level){
@@ -1208,7 +1242,7 @@
     if(panel){ panel.style.marginBottom = "0px"; panel.style.maxHeight = "92dvh"; }
     $("customMsg").blur();
   }
-  $("aaBtn").addEventListener("click", function(){ openMsg(); });
+  $("msgBtn").addEventListener("click", function(){ openMsg(); });
   $("closeMsg").addEventListener("click", closeMsg);
   $("msgSheet").addEventListener("click", function(e){ if(e.target === $("msgSheet")) closeMsg(); });
   $("addMsg").addEventListener("click", function(){
@@ -1334,8 +1368,51 @@
   $("wake").addEventListener("change", function(e){ settings.wake=e.target.checked; save(); requestWake(); });
   $("talkBeep").addEventListener("change", function(e){ settings.talkBeep=e.target.checked; save(); });
   $("talkToggle").addEventListener("change", function(e){ settings.talkToggle=e.target.checked; save(); });
-  $("settingsBtn").addEventListener("click", function(){ syncSettingsUI(); $("settings").classList.add("open"); });
-  $("closeSettings").addEventListener("click", function(){ $("settings").classList.remove("open"); });
+  function openSettings(){ syncSettingsUI(); $("settings").classList.add("open"); }
+  function closeSettings(){ $("settings").classList.remove("open"); }
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("closeSettings").addEventListener("click", closeSettings);
+  $("settings").addEventListener("click", function(e){ if(e.target === $("settings")) closeSettings(); });
+  function bindSwipeClose(panel, closeFn){
+    var startY = 0, tracking = false;
+    panel.addEventListener("touchstart", function(e){
+      if(panel.scrollTop > 4) return;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, {passive:true});
+    panel.addEventListener("touchend", function(e){
+      if(!tracking) return;
+      tracking = false;
+      if(e.changedTouches[0].clientY - startY > 64) closeFn();
+    });
+  }
+  bindSwipeClose($("settingsSheet"), closeSettings);
+  bindSwipeClose($("msgPanel"), closeMsg);
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    if($("settings").classList.contains("open")) closeSettings();
+    else if($("msgSheet").classList.contains("open")) closeMsg();
+  });
+  $("updateNow").addEventListener("click", function(){
+    var btn = $("updateNow");
+    btn.disabled = true;
+    btn.textContent = "Checking...";
+    fetch("version.js?ts=" + Date.now(), {cache:"no-store"}).then(function(r){
+      if(!r.ok) throw new Error("offline");
+      return r.text();
+    }).then(function(){
+      var regs = navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : Promise.resolve([]);
+      return regs.then(function(list){
+        return Promise.all(list.map(function(reg){ return reg.unregister(); }));
+      }).then(function(){
+        return caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); });
+      }).then(function(){ location.reload(); });
+    }).catch(function(){
+      btn.disabled = false;
+      btn.textContent = "Update now";
+      setStatus("Can't update while offline", true);
+    });
+  });
   $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
   $("resetBtn").addEventListener("click", function(){
     var keep = settings.clipVoice;
@@ -2010,33 +2087,48 @@
   document.addEventListener("click", function once(){ requestWake(); document.removeEventListener("click", once); });
 
   // ---------- Offline ----------
+  function showUpdateBanner(){
+    var btn = $("updateBtn");
+    if(!btn) return;
+    btn.hidden = false;
+    btn.textContent = "Update";
+  }
+  function reloadForUpdate(key){
+    try {
+      if(sessionStorage.getItem("pc-reload") === key) return;
+      sessionStorage.setItem("pc-reload", key);
+    } catch(e){}
+    location.reload();
+  }
+  function checkNetworkVersion(){
+    fetch("version.js?ts=" + Date.now(), {cache:"no-store"}).then(function(r){
+      if(!r.ok) throw new Error("offline");
+      return r.text();
+    }).then(function(text){
+      var m = /PITCHCALLER_VERSION\s*=\s*"([^"]+)"/.exec(text || "");
+      if(!m || !m[1] || m[1] === VERSION) return;
+      showUpdateBanner();
+      reloadForUpdate("ver:" + m[1]);
+    }).catch(function(){});
+  }
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    try { if(sessionStorage.getItem("pc-reload")) setTimeout(function(){ try{ sessionStorage.removeItem("pc-reload"); }catch(e){} }, 4000); } catch(e){}
     var hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange", function(){
       if(!hadController){ hadController = true; return; }
-      if(window.__swReloading) return;
-      window.__swReloading = true;
-      location.reload();
+      showUpdateBanner();
+      reloadForUpdate("sw");
     });
-    function offerUpdate(worker){
-      if(!worker) return;
-      if(!navigator.serviceWorker.controller){ worker.postMessage({type:"SKIP_WAITING"}); return; }
-      var btn = $("updateBtn");
-      btn.hidden = false;
-      btn.onclick = function(){ worker.postMessage({type:"SKIP_WAITING"}); };
-    }
-    window.addEventListener("load", function(){
-      navigator.serviceWorker.register("sw.js").then(function(reg){
-        if(reg.waiting) offerUpdate(reg.waiting);
-        reg.addEventListener("updatefound", function(){
-          var worker = reg.installing;
-          if(!worker) return;
-          worker.addEventListener("statechange", function(){
-            if(worker.state === "installed") offerUpdate(worker);
-          });
-        });
-      }).catch(function(e){ console.warn("SW failed", e); });
-    });
+    navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(function(reg){
+      reg.update().catch(function(){});
+      document.addEventListener("visibilitychange", function(){
+        if(document.visibilityState === "visible"){
+          reg.update().catch(function(){});
+          checkNetworkVersion();
+        }
+      });
+    }).catch(function(e){ console.warn("SW failed", e); });
+    checkNetworkVersion();
   }
   render();
 })();
