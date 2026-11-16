@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="SL Pitch">
-<title>Salt Lake Pitch Caller</title>
+<title>Salt Lake Phantoms Pitch Caller</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
@@ -51,15 +51,16 @@
   .team{
     display:block;
     font-family:"Yellowtail","Segoe Script","Brush Script MT",cursive;
-    font-size:clamp(34px, 7vw, 56px);
+    font-size:clamp(28px, 6.6vw, 52px);
     font-weight:400;
-    line-height:0.9;
+    line-height:1.05;
     letter-spacing:0.01em;
     color:#f5f5f6;
     -webkit-text-stroke:2.5px var(--orange);
     paint-order:stroke fill;
-    padding:2px 4px 0 1px;
+    padding:2px 2px 0 0;
   }
+  .teamLine{display:inline-block; white-space:nowrap;}
   .sub{
     display:block;
     margin-top:3px;
@@ -110,7 +111,6 @@
     display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;
   }
   #msgClear[hidden], #recLive[hidden], #noteRow[hidden]{display:none !important;}
-  #recBtn{touch-action:none;}
   #recBtn.rec{background:var(--brand); color:#fff;}
   #recLive{display:flex; align-items:center; gap:8px; min-height:18px; font-size:13px; font-weight:750; color:#fff;}
   .recDot{width:8px; height:8px; border-radius:50%; background:var(--brand); flex:none;}
@@ -185,7 +185,7 @@
     body{gap:10px;}
     main{gap:10px;}
     #sendBtn, #clearBtn{min-height:64px;}
-    .team{font-size:clamp(30px, 6vw, 44px);}
+    .team{font-size:clamp(24px, 5.4vw, 36px);}
   }
 </style>
 </head>
@@ -195,7 +195,7 @@
     <img class="mark" src="icons/sl-logo.png" width="64" height="64" alt="Salt Lake">
     <div class="brandText">
       <h1>
-        <span class="team">Salt Lake</span>
+        <span class="team"><span class="teamLine">Salt Lake</span> <span class="teamLine">Phantoms</span></span>
         <span class="sub">Pitch Caller</span>
       </h1>
       <div id="status">Loading clips...</div>
@@ -317,17 +317,17 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.3";
+  var VERSION = "v1.4";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
-    {id:"changeup", label:"Change up", say:"Change up"},
-    {id:"splitfinger", label:"Split finger", say:"Split finger"}
+    {id:"changeup", label:"Changeup", say:"Change up"},
+    {id:"splitfinger", label:"Split-Finger", say:"Split finger"}
   ];
   var ROWS = ["high","middle","low"];
   var COLS = ["inside","middle","outside"];
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-  function locLabel(r,c){ return (r==="middle"&&c==="middle") ? "Middle middle" : cap(r)+" "+c; }
+  function locLabel(r,c){ return cap(r)+" "+cap(c); }
 
   var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1};
   var settings = Object.assign({}, DEFAULTS);
@@ -342,8 +342,7 @@
   var ctx = null, buffers = {}, loaded = false, loadError = null;
   var routeDirty = false;
   var REC_MAX = 15;
-  var TAP_MS = 280;
-  var rec = {active:false, pendingStop:false, discard:false, startedAt:0, pressAt:0, wasActive:false, stream:null, recorder:null, chunks:[], timer:null, mode:"", mime:"", wavCtx:null, wavProc:null, wavSource:null, wavChunks:null};
+  var rec = {active:false, starting:false, cancelStart:false, pendingStop:false, discard:false, startedAt:0, stream:null, recorder:null, chunks:[], timer:null, mode:"", mime:"", wavCtx:null, wavProc:null, wavSource:null, wavChunks:null};
   var $ = function(id){return document.getElementById(id);};
   var statusEl = $("status");
   function setStatus(t, err){ statusEl.textContent = t; statusEl.className = err ? "err" : ""; }
@@ -359,9 +358,9 @@
   var locBtns = {};
   var g = $("locGrid");
   g.appendChild(document.createElement("div"));
-  COLS.forEach(function(c){ var d=document.createElement("div"); d.className="axis"; d.textContent=c.toUpperCase(); g.appendChild(d); });
+  COLS.forEach(function(c){ var d=document.createElement("div"); d.className="axis"; d.textContent=cap(c); g.appendChild(d); });
   ROWS.forEach(function(r){
-    var a=document.createElement("div"); a.className="axis"; a.textContent=r.toUpperCase(); a.style.writingMode="vertical-rl"; a.style.transform="rotate(180deg)"; g.appendChild(a);
+    var a=document.createElement("div"); a.className="axis"; a.textContent=cap(r); a.style.writingMode="vertical-rl"; a.style.transform="rotate(180deg)"; g.appendChild(a);
     COLS.forEach(function(c){
       var id = r+"-"+c, b = document.createElement("button");
       b.className="loc"; b.textContent = locLabel(r,c);
@@ -372,8 +371,8 @@
 
   function callText(p, l){
     if(!p) return "";
-    var t = PITCHES.filter(function(x){return x.id===p;})[0].say;
-    if(l){ var rc=l.split("-"); t += ", " + locLabel(rc[0],rc[1]).toLowerCase(); }
+    var t = PITCHES.filter(function(x){return x.id===p;})[0].label;
+    if(l){ var rc=l.split("-"); t += ", " + locLabel(rc[0],rc[1]); }
     return t;
   }
   function messageText(){ return ($("customMsg").value || "").replace(/\s+/g, " ").trim(); }
@@ -392,7 +391,7 @@
     var parts = callParts();
     var pv = $("preview");
     if(parts.length){ pv.textContent = parts.join(" "); pv.className=""; }
-    else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-")).toLowerCase()+")" : "Select a pitch"; pv.className="empty"; }
+    else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-"))+")" : "Select a pitch"; pv.className="empty"; }
     var sb = $("sendBtn");
     var blocked = state.playing || rec.active || (state.pitch && !!loadError);
     sb.disabled = blocked || !parts.length;
@@ -419,7 +418,6 @@
   }
   function createCtx(){
     if(!ctx){
-      try { if(navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
       var AC = window.AudioContext || window.webkitAudioContext;
       ctx = new AC({latencyHint:"interactive"});
       loadAll();
@@ -433,7 +431,13 @@
       .catch(function(e){ loadError=e; setStatus("Could not load clips: "+e.message, true); render(); });
   }
   // Create the context on first touch anywhere (required by iOS / Chrome autoplay rules).
-  function unlock(){ ensureCtx();
+  function fromRecButton(e){
+    var t = e && e.target;
+    return !!(t && (t.id === "recBtn" || (t.closest && t.closest("#recBtn"))));
+  }
+  function unlock(e){
+    if(fromRecButton(e)) return;
+    ensureCtx();
     if(loaded) setStatus("Ready - sound on");
     // play one silent sample to fully unlock iOS output
     try{ var b=ctx.createBuffer(1,1,22050), s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0);}catch(e){}
@@ -709,7 +713,7 @@
   $("closeSettings").addEventListener("click", function(){ $("settings").classList.remove("open"); });
   $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
   $("resetBtn").addEventListener("click", function(){ settings=Object.assign({},DEFAULTS); save(); syncSettingsUI(); });
-  $("version").textContent = "Salt Lake Pitch Caller " + VERSION + " - works offline after first load.";
+  $("version").textContent = "Salt Lake Phantoms Pitch Caller " + VERSION + " - works offline after first load.";
 
   // ---------- Voice note ----------
   function discardNote(){
@@ -823,8 +827,9 @@
     render();
   }
   function beginCapture(stream){
-    if(rec.pendingStop || rec.discard){
+    if(rec.cancelStart || rec.pendingStop || rec.discard){
       stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
+      rec.cancelStart = false;
       rec.pendingStop = false;
       rec.discard = false;
       return;
@@ -867,34 +872,41 @@
     }
     render();
   }
+  function micError(e){
+    var name = (e && e.name) || "Error";
+    var message = (e && e.message) || "";
+    setStatus("Mic error: " + name + (message ? " " + message : ""), true);
+  }
   function startRecording(){
-    if(rec.active || state.playing) return;
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setStatus("Microphone unavailable", true); return; }
+    if(rec.active || rec.starting || state.playing) return;
+    if(window.top !== window.self){ setStatus("Mic error: SecurityError page is in an iframe", true); return; }
+    try {
+      if(document.permissionsPolicy && document.permissionsPolicy.allowsFeature && !document.permissionsPolicy.allowsFeature("microphone")){
+        setStatus("Mic error: SecurityError Permissions-Policy blocks microphone", true);
+        return;
+      }
+    } catch(err){}
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setStatus("Mic error: NotSupportedError microphone API missing", true); return; }
     rec.discard = false;
-    navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1}}).then(beginCapture).catch(function(){
-      setStatus("Microphone permission denied", true);
+    rec.cancelStart = false;
+    rec.starting = true;
+    try { if(navigator.audioSession) navigator.audioSession.type = "auto"; } catch(e){}
+    var request;
+    try { request = navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ rec.starting = false; micError(e); return; }
+    request.then(function(stream){
+      rec.starting = false;
+      beginCapture(stream);
+    }).catch(function(e){
+      rec.starting = false;
+      micError(e);
     });
   }
-  var recBtn = $("recBtn");
-  recBtn.addEventListener("pointerdown", function(e){
+  $("recBtn").addEventListener("click", function(){
     if(state.playing) return;
-    if(e.button !== undefined && e.button !== 0) return;
-    e.preventDefault();
-    try { recBtn.setPointerCapture(e.pointerId); } catch(err){}
-    rec.pressAt = Date.now();
-    rec.wasActive = rec.active;
-    rec.pendingStop = false;
-    if(!rec.active) startRecording();
-  });
-  recBtn.addEventListener("pointerup", function(){
-    var held = Date.now() - rec.pressAt >= TAP_MS;
-    if(rec.wasActive || held) stopRecording();
-  });
-  recBtn.addEventListener("pointercancel", function(){ if(rec.active && (Date.now() - rec.pressAt) >= TAP_MS) stopRecording(); });
-  recBtn.addEventListener("keydown", function(e){
-    if(e.key !== " " && e.key !== "Enter") return;
-    e.preventDefault();
-    if(rec.active) stopRecording(); else startRecording();
+    if(rec.active){ stopRecording(); return; }
+    if(rec.starting){ rec.cancelStart = true; return; }
+    startRecording();
   });
 
   // ---------- Screen wake lock ----------
