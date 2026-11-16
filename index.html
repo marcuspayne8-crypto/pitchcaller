@@ -317,7 +317,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.5";
+  var VERSION = "v1.6";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -393,8 +393,8 @@
     if(parts.length){ pv.textContent = parts.join(" "); pv.className=""; }
     else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-"))+")" : "Select a pitch"; pv.className="empty"; }
     var sb = $("sendBtn");
-    var blocked = state.playing || rec.active || (state.pitch && !!loadError);
-    sb.disabled = blocked || !parts.length;
+    var hasCall = !!(state.pitch || messageText() || state.note);
+    sb.disabled = state.playing || rec.active || !hasCall;
     sb.textContent = state.playing ? "SENDING" : "SEND";
     sb.classList.toggle("playing", state.playing);
     $("msgClear").hidden = !$("customMsg").value;
@@ -509,13 +509,6 @@
       var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
       s.buffer = b; s.connect(ctx.destination); s.start(0);
     } catch(e){}
-    try {
-      if(window.speechSynthesis && !speechSynthesis.speaking){
-        var u = new SpeechSynthesisUtterance("");
-        u.volume = 0;
-        speechSynthesis.speak(u);
-      }
-    } catch(e){}
   }
   function restorePlaybackRoute(done){
     routeDirty = false;
@@ -540,10 +533,17 @@
       next();
     }
     audio.onended = finish;
-    audio.onerror = finish;
+    audio.onerror = function(){
+      var media = audio.error;
+      setStatus("Play error: " + (media && (media.message || media.code) || "media"), true);
+      finish();
+    };
     audio.src = url;
     var started = audio.play();
-    if(started && started.catch) started.catch(finish);
+    if(started && started.catch) started.catch(function(err){
+      setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+      finish();
+    });
   }
   function makePrerollUrl(){
     if(settings.prerollType === "off") return "";
@@ -579,21 +579,100 @@
     if(!v){ for(i=0;i<voices.length;i++){ if(/^en/i.test(voices[i].lang)){ v=voices[i]; break; } } }
     return v;
   }
-  function speakText(text, next){
-    if(!text || !window.speechSynthesis){ next(); return; }
+  function reportSpeech(ev){
+    var err = (ev && (ev.error || ev.name || ev.message)) || "unknown";
+    if(err === "canceled" || err === "interrupted") return;
+    setStatus("Speech error: " + err, true);
+  }
+  function makeUtterance(text){
     var u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.volume = 1;
     u.rate = settings.speechRate || 1;
-    u.volume = Math.max(0, Math.min(1, settings.vol/100));
-    var voice = pickVoice();
-    if(voice) u.voice = voice;
+    var voices = [];
+    try { voices = speechSynthesis.getVoices() || []; } catch(e){}
+    if(settings.voiceURI && voices.length){
+      for(var i=0;i<voices.length;i++){
+        if(voices[i].voiceURI === settings.voiceURI){ u.voice = voices[i]; break; }
+      }
+    }
+    u._waiters = [];
+    u.onend = function(){ u._done = true; var w = u._waiters.splice(0); for(var n=0;n<w.length;n++) w[n](); };
+    u.onerror = function(ev){ reportSpeech(ev); u._done = true; var w = u._waiters.splice(0); for(var n=0;n<w.length;n++) w[n](); };
+    return u;
+  }
+  function whenUtteranceDone(u, next){
+    if(!u || u._done){ next(); return; }
     var finished = false;
-    function finish(){ if(finished) return; finished = true; next(); }
-    var cap = Math.min(20000, Math.max(1200, text.length * 90 / (u.rate || 1) + 700));
-    var timer = setTimeout(finish, cap);
-    u.onend = function(){ clearTimeout(timer); finish(); };
-    u.onerror = function(){ clearTimeout(timer); finish(); };
-    try { if(speechSynthesis.speaking) speechSynthesis.cancel(); speechSynthesis.speak(u); }
-    catch(e){ clearTimeout(timer); finish(); }
+    function once(){ if(finished) return; finished = true; next(); }
+    u._waiters.push(once);
+    var cap = Math.min(20000, Math.max(1500, (u.text || "").length * 90 / (u.rate || 1) + 900));
+    setTimeout(function(){ if(!u._done){ u._done = true; once(); } }, cap);
+  }
+  function primeSpeech(text, times, defer){
+    if(!text || !window.speechSynthesis) return null;
+    try { speechSynthesis.cancel(); } catch(e){}
+    var utts = [];
+    for(var n=0;n<times;n++){
+      var u = makeUtterance(text);
+      utts.push(u);
+      try { speechSynthesis.speak(u); }
+      catch(err){ setStatus("Speech error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true); }
+    }
+    var paused = false;
+    if(defer){
+      try { speechSynthesis.pause(); } catch(e){}
+      paused = !!speechSynthesis.paused;
+    }
+    return {utts: utts, paused: paused};
+  }
+  function primeNote(note){
+    var url = notePlayUrl(note);
+    if(!url) return null;
+    var audio = new Audio();
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "");
+    audio.setAttribute("webkit-playsinline", "");
+    audio.volume = Math.max(0, Math.min(1, settings.vol/100));
+    audio.src = url;
+    var gate = {release:false, audio:audio};
+    var started = audio.play();
+    if(started && started.then){
+      started.then(function(){
+        if(!gate.release){
+          audio.pause();
+          try { audio.currentTime = 0; } catch(e){}
+        }
+      }).catch(function(err){
+        setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+      });
+    }
+    return gate;
+  }
+  function playPrimed(gate, next){
+    if(!gate || !gate.audio){ next(); return; }
+    var audio = gate.audio;
+    gate.release = true;
+    var finished = false;
+    var timer = setTimeout(finish, 20000);
+    function finish(){
+      if(finished) return;
+      finished = true;
+      clearTimeout(timer);
+      next();
+    }
+    audio.onended = finish;
+    audio.onerror = function(){
+      var media = audio.error;
+      setStatus("Play error: " + (media && (media.message || media.code) || "media"), true);
+      finish();
+    };
+    try { audio.currentTime = 0; } catch(e){}
+    var started = audio.play();
+    if(started && started.catch) started.catch(function(err){
+      setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+      finish();
+    });
   }
   function playBuffer(buffer, next){
     var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
@@ -644,46 +723,67 @@
     var message = (extra.message || "").trim();
     var note = extra.note || null;
     armPlayback();
-    if(pitch && !clipUrl[pitch] || loc && pitch && !clipUrl[loc]){
+    if(pitch && (!clipUrl[pitch] || (loc && !clipUrl[loc]))){
       setStatus("Clips still loading, try again", true);
-      if(done) done(false);
-      return;
+      if(!message && !note){ if(done) done(false); return; }
+      pitch = null; loc = null;
     }
-    var rounds = (settings.repeat && (pitch || message)) ? 2 : 1;
-    var round = 0;
-    var prerollObjectUrl = "";
+    var sayTwice = !!settings.repeat;
+    var speechTimes = (sayTwice && message) ? 2 : (message ? 1 : 0);
+    var clipRounds = (sayTwice && pitch) ? 2 : (pitch ? 1 : 0);
+    var speech = speechTimes ? primeSpeech(message, speechTimes, !!pitch) : null;
+    var noteGate = note ? primeNote(note) : null;
+    var prerollObjectUrl = settings.prerollType !== "off" ? makePrerollUrl() : "";
     function cleanup(){ if(prerollObjectUrl){ try{ URL.revokeObjectURL(prerollObjectUrl); }catch(e){} prerollObjectUrl = ""; } }
     function finish(ok){ cleanup(); if(done) done(ok); }
-    function playRound(){
+    function playClips(doneClips){
       var queue = [];
-      if(round === 0 && settings.prerollType !== "off"){
-        prerollObjectUrl = makePrerollUrl();
-        queue.push({url: prerollObjectUrl, vol: 1, gapAfter: 0});
-      }
       if(pitch){
-        queue.push({url: clipUrl[pitch], vol: null, gapAfter: loc ? settings.gap : 0});
-        if(loc) queue.push({url: clipUrl[loc], vol: null, gapAfter: 0});
+        queue.push({url: clipUrl[pitch], gapAfter: loc ? settings.gap : 0});
+        if(loc) queue.push({url: clipUrl[loc], gapAfter: 0});
       }
-      var idx = 0;
-      function nextStep(){
-        if(idx >= queue.length){
-          after(pitch && message ? settings.gap : 0, function(){
-            speakText(message, function(){
-              round++;
-              if(round < rounds) after(450, playRound);
-              else after((pitch || message) && note ? settings.gap : 0, function(){
-                playUrl(notePlayUrl(note), null, function(){ finish(true); });
-              });
-            });
-          });
-          return;
-        }
-        var step = queue[idx++];
-        playUrl(step.url, step.vol, function(){ after(step.gapAfter, nextStep); });
+      var i = 0;
+      function step(){
+        if(i >= queue.length){ doneClips(); return; }
+        var item = queue[i++];
+        playUrl(item.url, null, function(){ after(item.gapAfter, step); });
       }
-      nextStep();
+      step();
     }
-    playRound();
+    function playNoteDone(){
+      after((pitch || message) && note ? settings.gap : 0, function(){
+        playPrimed(noteGate, function(){ finish(true); });
+      });
+    }
+    function afterUtterance(index, next){
+      if(!speech || !speech.utts[index]){ next(); return; }
+      if(speech.paused && index === 0){
+        try { speechSynthesis.resume(); }
+        catch(err){ setStatus("Speech error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true); }
+      } else if(speech.paused){
+        try { speechSynthesis.resume(); } catch(e){}
+      }
+      whenUtteranceDone(speech.utts[index], next);
+    }
+    function runClips(round){
+      playClips(function(){
+        after(pitch && message ? settings.gap : 0, function(){
+          afterUtterance(round, function(){
+            if(round + 1 < clipRounds){
+              try { speechSynthesis.pause(); } catch(e){}
+              after(450, function(){ runClips(round + 1); });
+            } else if(speech && round + 1 < speech.utts.length){
+              afterUtterance(round + 1, playNoteDone);
+            } else playNoteDone();
+          });
+        });
+      });
+    }
+    playUrl(prerollObjectUrl, 1, function(){
+      if(speech && pitch && !speech.paused){
+        whenUtteranceDone(speech.utts[speech.utts.length - 1], function(){ runClips(0); });
+      } else runClips(0);
+    });
   }
 
   // ---------- Actions ----------
@@ -798,14 +898,16 @@
   // ---------- Voice note ----------
   function discardNote(){
     if(state.note && state.note.url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
+    if(state.note && state.note._url){ try{ URL.revokeObjectURL(state.note._url); }catch(e){} }
     state.note = null;
   }
-  function acceptNote(raw, blob, secs){
+  function acceptNote(raw, blob, secs, mime){
     if(rec.discard){ rec.discard = false; return; }
     var rounded = Math.min(REC_MAX, Math.max(1, Math.round(secs || 1)));
-    var url = blob ? URL.createObjectURL(blob) : null;
+    var type = mime || (blob && blob.type) || "audio/wav";
+    var url = blob ? URL.createObjectURL(blob) : (raw ? URL.createObjectURL(new Blob([raw], {type:type})) : null);
     if(state.note && state.note.url && state.note.url !== url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
-    state.note = {raw: raw, url: url, secs: rounded};
+    state.note = {raw: raw, url: url, secs: rounded, mime: type};
     render();
   }
   function pickMime(){
@@ -869,7 +971,7 @@
     if(discard || !chunks.length){ rec.discard = false; restorePlaybackRoute(); return; }
     var raw = encodeWav(chunks, rate);
     var secs = (Date.now() - rec.startedAt) / 1000;
-    restorePlaybackRoute(function(){ acceptNote(raw, null, secs); });
+    restorePlaybackRoute(function(){ acceptNote(raw, new Blob([raw], {type:"audio/wav"}), secs, "audio/wav"); });
   }
   function finishMediaRecorder(){
     var chunks = rec.chunks || [];
@@ -883,7 +985,7 @@
     restorePlaybackRoute(function(){
       blob.arrayBuffer().then(function(ab){
         var raw = ab.slice(0);
-        decode(raw.slice(0)).then(function(){ acceptNote(raw, null, secs); }).catch(function(){ acceptNote(null, blob, secs); });
+        decode(raw.slice(0)).then(function(){ acceptNote(raw, blob, secs, mime); }).catch(function(){ acceptNote(raw, blob, secs, mime); });
       }).catch(function(){ setStatus("Could not use that recording", true); });
     });
   }
