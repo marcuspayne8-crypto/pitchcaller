@@ -1,7 +1,9 @@
-const CACHE = "pitchcaller-v2.0";
+importScripts("version.js");
+const CACHE = "pitchcaller-" + PITCHCALLER_VERSION;
 const ASSETS = [
   "./",
   "index.html",
+  "version.js",
   "manifest.webmanifest",
   "fonts/yellowtail-latin.woff2",
   "icons/sl-logo.png",
@@ -76,7 +78,10 @@ const ASSETS = [
   "clips/voices/cowboy/splitfinger.mp3"
 ];
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+});
+self.addEventListener("message", e => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));

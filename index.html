@@ -13,6 +13,7 @@
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
+<script src="version.js"></script>
 <style>
   /* Yellowtail (c) 2011 Brian J. Bonislawsky, Apache 2.0. See fonts/LICENSE. */
   @font-face {
@@ -118,6 +119,22 @@
   #recMeterBar{display:block; height:100%; width:0; background:var(--orange);}
   #noteRow{display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:700;}
   #notePlay, #noteDelete{width:32px; height:32px; border-radius:10px; padding:0; display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;}
+  #versionLine{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:2px;}
+  #appVersion{font-size:12px; font-weight:800; letter-spacing:0.08em; color:#c8c8ce;}
+  #updateBtn{font-size:12px; font-weight:750; padding:4px 8px; border-radius:999px; background:transparent; color:var(--orange); border:1px solid var(--orange);}
+  #outLevel{display:flex; align-items:center; gap:8px; flex:none; min-height:18px;}
+  #outLevelLabel, #outLevelMode{font-size:11px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); flex:none;}
+  #outLevelMode{color:var(--orange); letter-spacing:0.08em;}
+  #outMeter{flex:1; height:8px; border-radius:99px; background:#1c1c21; overflow:hidden;}
+  #outMeterBar{display:block; height:100%; width:0; background:var(--orange);}
+  #talkBtn{
+    min-height:76px; font-size:22px; font-weight:800; letter-spacing:0.04em;
+    background:var(--orange); color:var(--orange-ink); border-radius:22px;
+    touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  #talkBtn.live{background:var(--brand); color:#fff;}
+  #talkLive{display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; letter-spacing:0.14em; color:#fff;}
+  #talkLive[hidden]{display:none !important;}
   #preview{font-size:clamp(18px, 3.4vw, 30px); font-weight:750; text-align:center; min-height:1.25em; letter-spacing:-0.02em; line-height:1.2; max-height:2.6em; overflow:hidden;}
   #preview.empty{color:var(--muted); font-weight:600; font-size:clamp(16px, 3vw, 22px);}
   #voiceBar{
@@ -210,6 +227,10 @@
         <span class="team"><span class="teamLine">Salt Lake</span> <span class="teamLine">Phantoms</span></span>
         <span class="sub">Pitch Caller</span>
       </h1>
+      <div id="versionLine">
+        <span id="appVersion"></span>
+        <button type="button" id="updateBtn" hidden>Update available - tap to refresh</button>
+      </div>
       <div id="status">Loading clips...</div>
     </div>
   </div>
@@ -220,6 +241,11 @@
   </button>
 </header>
 <div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
+<div id="outLevel">
+  <span id="outLevelLabel">Output level</span>
+  <span id="outMeter" aria-hidden="true"><span id="outMeterBar"></span></span>
+  <span id="outLevelMode"></span>
+</div>
 
 <main>
   <section id="pitchBox">
@@ -259,6 +285,8 @@
       <button type="button" id="clearBtn">Clear</button>
       <button type="button" id="sendBtn" disabled>SEND</button>
     </div>
+    <button type="button" id="talkBtn" aria-pressed="false">Enable Talk</button>
+    <div id="talkLive" hidden><span class="recDot" aria-hidden="true"></span><span>Live</span></div>
     <div id="lastSent"></div>
   </section>
 </main>
@@ -325,6 +353,11 @@
       <label class="toggle"><input type="checkbox" id="wake"> Keep screen awake</label>
     </div>
 
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="talkBeep"> Talk beep</label>
+      <div class="hint">A short soft beep when Hold to Talk starts, so the radio keys up. Off by default.</div>
+    </div>
+
     <div class="sheetBtns">
       <button type="button" id="testBtn">Test radio (plays "Fastball")</button>
       <button type="button" id="resetBtn">Reset defaults</button>
@@ -339,7 +372,6 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v2.0";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -358,7 +390,8 @@
     {id:"calm", label:"Calm"},
     {id:"cowboy", label:"Cowboy"}
   ];
-  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus"};
+  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.1";
+  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
   function save(){ try{ localStorage.setItem("pc-settings", JSON.stringify(settings)); }catch(e){} }
@@ -564,6 +597,7 @@
   }
   document.addEventListener("pointerdown", unlock, true);
   document.addEventListener("touchstart", unlock, true);
+  $("appVersion").textContent = VERSION;
   CLIP_VOICES.forEach(function(v){
     var b = document.createElement("button");
     b.type = "button";
@@ -628,6 +662,7 @@
     armPlayback();
     if(done) done();
   }
+  var prerollBuffer = null;
   var player = document.createElement("audio");
   player.id = "callPlayer";
   player.setAttribute("playsinline", "");
@@ -638,7 +673,68 @@
   var playerGen = 0;
   var playStage = "start";
   var playWatch = null;
-  function playUrl(url, volume, next){
+  var outAnalyser = null;
+  var meter = {mode:"idle", buf:null, noteBuf:null, noteWhen:0, noteDur:0};
+  function outputNode(){
+    if(!ctx) return null;
+    if(!outAnalyser || outAnalyser.context !== ctx){
+      outAnalyser = ctx.createAnalyser();
+      outAnalyser.fftSize = 1024;
+      outAnalyser.smoothingTimeConstant = 0.4;
+      outAnalyser.connect(ctx.destination);
+    }
+    return outAnalyser;
+  }
+  function analyserPeak(node){
+    if(!node) return 0;
+    var data = analyserPeak.buf;
+    if(!data || data.length !== node.fftSize){ data = new Uint8Array(node.fftSize); analyserPeak.buf = data; }
+    node.getByteTimeDomainData(data);
+    var peak = 0, i, v;
+    for(i=0;i<data.length;i++){
+      v = Math.abs(data[i] - 128) / 128;
+      if(v > peak) peak = v;
+    }
+    return peak;
+  }
+  function samplePeak(buffer, time){
+    if(!buffer || time < 0) return 0;
+    var data = buffer.getChannelData(0);
+    var rate = buffer.sampleRate;
+    var center = Math.floor(time * rate);
+    if(center >= data.length) return 0;
+    var win = Math.floor(rate * 0.04);
+    var start = Math.max(0, center - win), end = Math.min(data.length, center + win);
+    var peak = 0, i, a;
+    for(i=start;i<end;i+=4){ a = data[i] < 0 ? -data[i] : data[i]; if(a > peak) peak = a; }
+    return peak;
+  }
+  function paintMeter(){
+    var bar = $("outMeterBar");
+    var modeEl = $("outLevelMode");
+    if(!bar) return;
+    var level = 0;
+    var tts = meter.mode === "tts" || (window.speechSynthesis && speechSynthesis.speaking && meter.mode === "tts");
+    if(talk.live && talk.analyser){
+      level = analyserPeak(talk.analyser);
+      if(modeEl) modeEl.textContent = "";
+    } else if(meter.mode === "tts"){
+      bar.style.width = "0%";
+      if(modeEl) modeEl.textContent = "TTS";
+      return;
+    } else if(meter.noteBuf && ctx && ctx.currentTime >= meter.noteWhen && ctx.currentTime <= meter.noteWhen + meter.noteDur + 0.05){
+      level = Math.max(level, samplePeak(meter.noteBuf, ctx.currentTime - meter.noteWhen));
+      if(outAnalyser) level = Math.max(level, analyserPeak(outAnalyser));
+      if(modeEl) modeEl.textContent = "";
+    } else if(meter.buf && player && !player.paused && player.currentTime >= 0){
+      level = samplePeak(meter.buf, player.currentTime);
+      if(modeEl) modeEl.textContent = "";
+    } else if(modeEl) modeEl.textContent = "";
+    var db = level > 0.0001 ? 20 * Math.log10(level) : -60;
+    var pct = Math.max(0, Math.min(100, (db + 48) / 48 * 100));
+    bar.style.width = pct + "%";
+  }
+  function playUrl(url, volume, next, meterBuffer){
     var gen = ++playerGen;
     if(!url){ next(); return; }
     var finished = false;
@@ -660,6 +756,8 @@
       setStatus("Play error: " + (media && (media.message || media.code) || "media"), true);
       finish();
     };
+    meter.buf = meterBuffer || null;
+    if(meter.mode !== "tts" && !talk.live) meter.mode = meterBuffer ? "buffer" : "idle";
     if(player.src !== url) player.src = url;
     else { try { player.currentTime = 0; } catch(e){} }
     var started = player.play();
@@ -685,6 +783,13 @@
       env = 1; if(i<fade) env=i/fade; else if(i>n-fade) env=(n-i)/fade;
       d[i] = v * level * env;
     }
+    prerollBuffer = null;
+    try {
+      if(ctx){
+        prerollBuffer = ctx.createBuffer(1, d.length, sr);
+        prerollBuffer.getChannelData(0).set(d);
+      }
+    } catch(e){}
     return URL.createObjectURL(new Blob([encodeWav([d], sr)], {type:"audio/wav"}));
   }
   function notePlayUrl(note){
@@ -748,6 +853,7 @@
       try { speechSynthesis.pause(); } catch(e){}
       paused = !!speechSynthesis.paused;
     }
+    if(!defer || !paused) meter.mode = "tts";
     return {utts: utts, paused: paused};
   }
   function after(ms, next){ if(ms>0) setTimeout(next, ms); else next(); }
@@ -784,33 +890,6 @@
       try { player.pause(); } catch(e){}
       render();
     }, (expect + 3) * 1000);
-    var armedNote = null;
-    if(note && note.buffer){
-      try {
-        var noteSrc = ctx.createBufferSource();
-        var noteGain = ctx.createGain();
-        noteGain.gain.value = Math.max(0, Math.min(1.5, settings.vol / 100));
-        noteSrc.buffer = note.buffer;
-        noteSrc.connect(noteGain);
-        noteGain.connect(ctx.destination);
-        var noteDelay = 0.08;
-        if(settings.prerollType !== "off") noteDelay += settings.prerollLen / 1000 + 0.08;
-        var clipOnce = 0;
-        if(pitch && buffers[pitch]) clipOnce += buffers[pitch].duration + 0.08;
-        if(pitch && loc && buffers[loc]) clipOnce += settings.gap / 1000 + buffers[loc].duration + 0.08;
-        var rounds = (settings.repeat && pitch) ? 2 : (pitch ? 1 : 0);
-        noteDelay += clipOnce * rounds;
-        if(rounds > 1) noteDelay += 0.45;
-        if(pitch && message) noteDelay += (settings.gap / 1000) * rounds;
-        if(message) noteDelay += ((message.length * 0.09) / (settings.speechRate || 1) + 0.55) * (settings.repeat ? 2 : 1);
-        if(pitch || message) noteDelay += settings.gap / 1000;
-        var noteWhen = ctx.currentTime + noteDelay;
-        noteSrc.start(noteWhen);
-        armedNote = {src: noteSrc, when: noteWhen, duration: note.buffer.duration};
-      } catch(err){
-        setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
-      }
-    }
     if(pitch && (!clipUrl[pitch] || (loc && !clipUrl[loc]))){
       setStatus("Clips still loading, try again", true);
       if(!message && !note){ if(done) done(false); return; }
@@ -820,22 +899,52 @@
     var speechTimes = (sayTwice && message) ? 2 : (message ? 1 : 0);
     var clipRounds = (sayTwice && pitch) ? 2 : (pitch ? 1 : 0);
     var speech = speechTimes ? primeSpeech(message, speechTimes, !!pitch) : null;
+    var armedNote = null;
     var noteUrl = note && note.url;
     var prerollObjectUrl = settings.prerollType !== "off" ? makePrerollUrl() : "";
+    if(note && note.buffer){
+      try {
+        var noteSrc = ctx.createBufferSource();
+        var noteGain = ctx.createGain();
+        noteGain.gain.value = Math.max(0, Math.min(1.5, settings.vol / 100));
+        noteSrc.buffer = note.buffer;
+        noteSrc.connect(noteGain);
+        noteGain.connect(outputNode());
+        var noteDelay = 0.08;
+        if(settings.prerollType !== "off") noteDelay += settings.prerollLen / 1000 + 0.08;
+        var clipOnce = 0;
+        if(pitch && buffers[pitch]) clipOnce += buffers[pitch].duration + 0.08;
+        if(pitch && loc && buffers[loc]) clipOnce += settings.gap / 1000 + buffers[loc].duration + 0.08;
+        var clipTimes = (settings.repeat && pitch) ? 2 : (pitch ? 1 : 0);
+        noteDelay += clipOnce * clipTimes;
+        if(clipTimes > 1) noteDelay += 0.45;
+        if(pitch && message) noteDelay += (settings.gap / 1000) * clipTimes;
+        if(message) noteDelay += ((message.length * 0.09) / (settings.speechRate || 1) + 0.55) * (settings.repeat ? 2 : 1);
+        if(pitch || message) noteDelay += settings.gap / 1000;
+        var noteWhen = ctx.currentTime + noteDelay;
+        noteSrc.start(noteWhen);
+        meter.noteBuf = note.buffer;
+        meter.noteWhen = noteWhen;
+        meter.noteDur = note.buffer.duration;
+        armedNote = {src: noteSrc, when: noteWhen, duration: note.buffer.duration};
+      } catch(err){
+        setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+      }
+    }
     function cleanup(){ if(prerollObjectUrl){ try{ URL.revokeObjectURL(prerollObjectUrl); }catch(e){} prerollObjectUrl = ""; } }
     function finish(ok){ clearTimeout(playWatch); cleanup(); if(done) done(ok); }
     function playClips(doneClips){
       playStage = "clips";
       var queue = [];
       if(pitch){
-        queue.push({url: clipUrl[pitch], gapAfter: loc ? settings.gap : 0});
-        if(loc) queue.push({url: clipUrl[loc], gapAfter: 0});
+        queue.push({url: clipUrl[pitch], gapAfter: loc ? settings.gap : 0, buffer: buffers[pitch]});
+        if(loc) queue.push({url: clipUrl[loc], gapAfter: 0, buffer: buffers[loc]});
       }
       var i = 0;
       function step(){
         if(i >= queue.length){ doneClips(); return; }
         var item = queue[i++];
-        playUrl(item.url, null, function(){ after(item.gapAfter, step); });
+        playUrl(item.url, null, function(){ after(item.gapAfter, step); }, item.buffer);
       }
       step();
     }
@@ -857,11 +966,13 @@
       playStage = "message";
       if(!speech || !speech.utts[index]){ next(); return; }
       if(speech.paused && index === 0){
+        meter.mode = "tts";
         try { speechSynthesis.resume(); }
         catch(err){ setStatus("Speech error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true); }
       } else if(speech.paused){
+        meter.mode = "tts";
         try { speechSynthesis.resume(); } catch(e){}
-      }
+      } else meter.mode = "tts";
       whenUtteranceDone(speech.utts[index], next);
     }
     function runClips(round){
@@ -882,7 +993,7 @@
       if(speech && pitch && !speech.paused){
         whenUtteranceDone(speech.utts[speech.utts.length - 1], function(){ runClips(0); });
       } else runClips(0);
-    });
+    }, prerollBuffer);
   }
 
   // ---------- Actions ----------
@@ -932,8 +1043,12 @@
       gain.gain.value = Math.max(0, Math.min(1.5, settings.vol / 100));
       src.buffer = state.note.buffer;
       src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start(0);
+      gain.connect(outputNode());
+      var when = ctx.currentTime + 0.02;
+      meter.noteBuf = state.note.buffer;
+      meter.noteWhen = when;
+      meter.noteDur = state.note.buffer.duration;
+      src.start(when);
     } catch(err){
       setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
     }
@@ -984,7 +1099,7 @@
     $("speechRate").value = settings.speechRate;
     $("rateVal").textContent = Number(settings.speechRate).toFixed(1);
     Array.prototype.forEach.call($("prerollType").children, function(b){ b.classList.toggle("sel", b.dataset.v===settings.prerollType); });
-    $("repeat").checked = settings.repeat; $("wake").checked = settings.wake;
+    $("repeat").checked = settings.repeat; $("wake").checked = settings.wake; $("talkBeep").checked = !!settings.talkBeep;
     fillVoices();
     syncVoiceUI();
   }
@@ -1008,6 +1123,7 @@
   });
   $("repeat").addEventListener("change", function(e){ settings.repeat=e.target.checked; save(); });
   $("wake").addEventListener("change", function(e){ settings.wake=e.target.checked; save(); requestWake(); });
+  $("talkBeep").addEventListener("change", function(e){ settings.talkBeep=e.target.checked; save(); });
   $("settingsBtn").addEventListener("click", function(){ syncSettingsUI(); $("settings").classList.add("open"); });
   $("closeSettings").addEventListener("click", function(){ $("settings").classList.remove("open"); });
   $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
@@ -1386,6 +1502,141 @@
     startRecording();
   });
 
+  // ---------- Push to talk ----------
+  var talk = {enabled:false, live:false, stream:null, source:null, comp:null, gain:null, analyser:null, beep:null};
+  function talkLabel(){
+    var btn = $("talkBtn");
+    btn.textContent = talk.live ? "Live" : (talk.enabled ? "Hold to Talk" : "Enable Talk");
+    btn.classList.toggle("live", talk.live);
+    btn.setAttribute("aria-pressed", talk.live ? "true" : "false");
+    $("talkLive").hidden = !talk.live;
+  }
+  function stopTalkStream(){
+    if(talk.source){ try{ talk.source.disconnect(); }catch(e){} }
+    if(talk.comp){ try{ talk.comp.disconnect(); }catch(e){} }
+    if(talk.gain){ try{ talk.gain.disconnect(); }catch(e){} }
+    if(talk.analyser){ try{ talk.analyser.disconnect(); }catch(e){} }
+    talk.source = talk.comp = talk.gain = talk.analyser = null;
+    if(talk.stream){
+      talk.stream.getTracks().forEach(function(t){ try{ t.enabled = false; t.stop(); }catch(e){} });
+      talk.stream = null;
+    }
+  }
+  function stopTalk(){
+    if(!talk.live && !talk.stream){ talkLabel(); return; }
+    talk.live = false;
+    stopTalkStream();
+    setAudioSession("playback");
+    if(meter.mode !== "tts") meter.mode = "idle";
+    talkLabel();
+  }
+  function playTalkBeep(){
+    if(!settings.talkBeep || !ctx) return;
+    try {
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      var t = ctx.currentTime;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.06, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      osc.connect(g);
+      g.connect(outputNode());
+      osc.start(t);
+      osc.stop(t + 0.1);
+    } catch(e){}
+  }
+  function connectTalk(stream){
+    if(!talk.wantLive){ stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} }); return; }
+    ensureCtx();
+    try { ctx.resume(); } catch(e){}
+    talk.stream = stream;
+    talk.source = ctx.createMediaStreamSource(stream);
+    talk.comp = ctx.createDynamicsCompressor();
+    talk.comp.threshold.value = -24;
+    talk.comp.knee.value = 10;
+    talk.comp.ratio.value = 2.2;
+    talk.comp.attack.value = 0.004;
+    talk.comp.release.value = 0.12;
+    talk.gain = ctx.createGain();
+    talk.gain.gain.value = 1.15;
+    talk.analyser = ctx.createAnalyser();
+    talk.analyser.fftSize = 512;
+    talk.analyser.smoothingTimeConstant = 0.35;
+    talk.source.connect(talk.comp);
+    talk.comp.connect(talk.gain);
+    talk.gain.connect(talk.analyser);
+    talk.analyser.connect(outputNode());
+    talk.live = true;
+    meter.mode = "live";
+    playTalkBeep();
+    talkLabel();
+  }
+  function startTalk(){
+    if(!talk.enabled || talk.live || state.playing || rec.active) return;
+    talk.wantLive = true;
+    setAudioSession("play-and-record");
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!ctx || ctx.state === "closed") ctx = new AC({latencyHint:"interactive"});
+    try { ctx.resume(); } catch(e){}
+    var request;
+    try { request = navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
+    catch(e){ talk.wantLive = false; micError(e); setAudioSession("playback"); return; }
+    request.then(connectTalk).catch(function(e){
+      talk.wantLive = false;
+      talk.live = false;
+      setAudioSession("playback");
+      micError(e);
+      talkLabel();
+    });
+  }
+  function enableTalk(){
+    if(talk.enabled || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      if(!navigator.mediaDevices) setStatus("Mic error: NotSupportedError microphone API missing", true);
+      return;
+    }
+    setAudioSession("play-and-record");
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!ctx || ctx.state === "closed") ctx = new AC({latencyHint:"interactive"});
+    try { ctx.resume(); } catch(e){}
+    var request;
+    try { request = navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
+    catch(e){ micError(e); setAudioSession("playback"); return; }
+    request.then(function(stream){
+      stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(err){} });
+      talk.enabled = true;
+      setAudioSession("playback");
+      talkLabel();
+      setStatus("Talk enabled. Hold the button to transmit.");
+    }).catch(function(e){
+      setAudioSession("playback");
+      micError(e);
+    });
+  }
+  var talkBtn = $("talkBtn");
+  talkBtn.addEventListener("click", function(){ if(!talk.enabled) enableTalk(); });
+  talkBtn.addEventListener("pointerdown", function(e){
+    if(!talk.enabled || state.playing) return;
+    if(e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    try { talkBtn.setPointerCapture(e.pointerId); } catch(err){}
+    startTalk();
+  });
+  function endTalkPointer(){ talk.wantLive = false; stopTalk(); }
+  talkBtn.addEventListener("pointerup", endTalkPointer);
+  talkBtn.addEventListener("pointercancel", endTalkPointer);
+  talkBtn.addEventListener("pointerleave", endTalkPointer);
+  talkBtn.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState !== "visible") endTalkPointer(); });
+  talkLabel();
+
+  function paintLoop(){
+    paintMeter();
+    requestAnimationFrame(paintLoop);
+  }
+  requestAnimationFrame(paintLoop);
+
   // ---------- Screen wake lock ----------
   var wakeLock = null;
   function requestWake(){
@@ -1398,7 +1649,32 @@
 
   // ---------- Offline ----------
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
-    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("SW failed", e); }); });
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if(!hadController){ hadController = true; return; }
+      if(window.__swReloading) return;
+      window.__swReloading = true;
+      location.reload();
+    });
+    function offerUpdate(worker){
+      if(!worker) return;
+      if(!navigator.serviceWorker.controller){ worker.postMessage({type:"SKIP_WAITING"}); return; }
+      var btn = $("updateBtn");
+      btn.hidden = false;
+      btn.onclick = function(){ worker.postMessage({type:"SKIP_WAITING"}); };
+    }
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").then(function(reg){
+        if(reg.waiting) offerUpdate(reg.waiting);
+        reg.addEventListener("updatefound", function(){
+          var worker = reg.installing;
+          if(!worker) return;
+          worker.addEventListener("statechange", function(){
+            if(worker.state === "installed") offerUpdate(worker);
+          });
+        });
+      }).catch(function(e){ console.warn("SW failed", e); });
+    });
   }
   render();
 })();
