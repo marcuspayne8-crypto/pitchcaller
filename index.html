@@ -317,7 +317,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.4";
+  var VERSION = "v1.5";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -339,7 +339,7 @@
   if (typeof settings.voiceURI !== "string") settings.voiceURI = "";
 
   var state = {pitch:null, loc:null, playing:false, note:null};
-  var ctx = null, buffers = {}, loaded = false, loadError = null;
+  var ctx = null, buffers = {}, clipRaw = {}, clipUrl = {}, loaded = false, loadError = null;
   var routeDirty = false;
   var REC_MAX = 15;
   var rec = {active:false, starting:false, cancelStart:false, pendingStop:false, discard:false, startedAt:0, stream:null, recorder:null, chunks:[], timer:null, mode:"", mime:"", wavCtx:null, wavProc:null, wavSource:null, wavChunks:null};
@@ -423,12 +423,32 @@
       loadAll();
     }
   }
+  function rememberClip(name, ab){
+    var copy = ab.slice(0);
+    clipRaw[name] = copy;
+    if(clipUrl[name]){ try{ URL.revokeObjectURL(clipUrl[name]); }catch(e){} }
+    clipUrl[name] = URL.createObjectURL(new Blob([copy], {type:"audio/mpeg"}));
+  }
   function loadAll(){
     var names = clipNames();
     setStatus("Loading clips...");
-    Promise.all(names.map(function(n){ return getClipData(n).then(decode).then(function(b){ buffers[n]=b; }); }))
+    Promise.all(names.map(function(n){
+      return getClipData(n).then(function(ab){
+        rememberClip(n, ab);
+        return decode(ab.slice(0)).then(function(b){ buffers[n]=b; });
+      });
+    }))
       .then(function(){ loaded=true; setStatus("Ready - "+names.length+" clips loaded" + (ctx.state!=="running" ? " (tap to enable sound)" : "")); render(); })
       .catch(function(e){ loadError=e; setStatus("Could not load clips: "+e.message, true); render(); });
+  }
+  function redecodeClips(){
+    var names = Object.keys(clipRaw);
+    if(!names.length){ if(ctx) loadAll(); return; }
+    Promise.all(names.map(function(n){
+      return decode(clipRaw[n].slice(0)).then(function(b){ buffers[n]=b; });
+    })).then(function(){ loaded=true; render(); }).catch(function(e){
+      loadError=e; setStatus("Could not load clips: "+e.message, true); render();
+    });
   }
   // Create the context on first touch anywhere (required by iOS / Chrome autoplay rules).
   function fromRecButton(e){
@@ -471,42 +491,86 @@
     });
     return t;
   }
-  function playClipsOnly(pitch, loc, done){
-    ensureCtx();
-    if(!loaded){ setStatus("Clips still loading, try again", true); if(done)done(false); return; }
-    var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
-    var seq = [];
-    if(settings.prerollType !== "off") seq.push({buf: makePreroll(settings.prerollLen/1000, settings.prerollType, settings.prerollLevel/100), raw:true});
-    var body = [{buf: buffers[pitch]}];
-    if(loc){ body.push({gap: settings.gap/1000}); body.push({buf: buffers[loc]}); }
-    seq = seq.concat(body);
-    if(settings.repeat){ seq.push({gap:0.45}); seq = seq.concat(body); }
-    var start = ctx.currentTime + 0.05;
-    var end = schedule(seq, start, out);
-    setTimeout(function(){ if(done) done(true); }, Math.ceil((end - ctx.currentTime)*1000) + 150);
+  function setAudioSession(type){
+    try { if(navigator.audioSession) navigator.audioSession.type = type; } catch(e){}
+  }
+  function armPlayback(){
+    setAudioSession("playback");
+    var AC = window.AudioContext || window.webkitAudioContext;
+    var fresh = !ctx || ctx.state === "closed";
+    if(fresh){
+      ctx = new AC({latencyHint:"interactive"});
+      buffers = {};
+      loaded = false;
+      redecodeClips();
+    }
+    try { ctx.resume(); } catch(e){}
+    try {
+      var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    } catch(e){}
+    try {
+      if(window.speechSynthesis && !speechSynthesis.speaking){
+        var u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        speechSynthesis.speak(u);
+      }
+    } catch(e){}
   }
   function restorePlaybackRoute(done){
-    try { if(navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
-    if(!routeDirty){
-      if(ctx && ctx.state !== "running"){
-        var resumed = ctx.resume();
-        if(resumed && resumed.then){ resumed.then(function(){ if(done) done(); }, function(){ if(done) done(); }); return; }
-      }
-      try{ if(ctx){ var kick=ctx.createBuffer(1,1,22050), ks=ctx.createBufferSource(); ks.buffer=kick; ks.connect(ctx.destination); ks.start(0);} }catch(e){}
-      if(done) done();
-      return;
-    }
     routeDirty = false;
-    var old = ctx;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    ctx = new AC({latencyHint:"interactive"});
-    try{ var b=ctx.createBuffer(1,1,22050), s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0);}catch(e){}
-    if(old){ try{ old.close(); }catch(e){} }
-    if(ctx.state !== "running"){
-      var p = ctx.resume();
-      if(p && p.then){ p.then(function(){ if(done) done(); }, function(){ if(done) done(); }); return; }
-    }
+    armPlayback();
     if(done) done();
+  }
+  function playUrl(url, volume, next){
+    if(!url){ next(); return; }
+    var audio = new Audio();
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "");
+    audio.setAttribute("webkit-playsinline", "");
+    audio.volume = Math.max(0, Math.min(1, volume == null ? settings.vol/100 : volume));
+    var finished = false;
+    var timer = setTimeout(finish, 20000);
+    function finish(){
+      if(finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try { audio.pause(); } catch(e){}
+      audio.onended = null; audio.onerror = null;
+      next();
+    }
+    audio.onended = finish;
+    audio.onerror = finish;
+    audio.src = url;
+    var started = audio.play();
+    if(started && started.catch) started.catch(finish);
+  }
+  function makePrerollUrl(){
+    if(settings.prerollType === "off") return "";
+    var sr = 44100, seconds = settings.prerollLen/1000, level = settings.prerollLevel/100;
+    var n = Math.max(1, Math.floor(sr * seconds)), d = new Float32Array(n);
+    var fade = Math.min(Math.floor(sr * 0.04), Math.floor(n / 3));
+    var b0=0, b1=0, b2=0, i, v, env, w;
+    for(i=0;i<n;i++){
+      if(settings.prerollType === "tone") v = Math.sin(2 * Math.PI * 440 * i / sr);
+      else {
+        w = Math.random()*2-1;
+        b0=0.99765*b0+w*0.0990460; b1=0.96300*b1+w*0.2965164; b2=0.57000*b2+w*1.0526913;
+        v=(b0+b1+b2+w*0.1848)*0.25;
+      }
+      env = 1; if(i<fade) env=i/fade; else if(i>n-fade) env=(n-i)/fade;
+      d[i] = v * level * env;
+    }
+    return URL.createObjectURL(new Blob([encodeWav([d], sr)], {type:"audio/wav"}));
+  }
+  function notePlayUrl(note){
+    if(!note) return "";
+    if(note.url) return note.url;
+    if(note.raw){
+      if(!note._url) note._url = URL.createObjectURL(new Blob([note.raw], {type:"audio/wav"}));
+      return note._url;
+    }
+    return "";
   }
   function pickVoice(){
     var voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
@@ -528,7 +592,7 @@
     var timer = setTimeout(finish, cap);
     u.onend = function(){ clearTimeout(timer); finish(); };
     u.onerror = function(){ clearTimeout(timer); finish(); };
-    try { speechSynthesis.cancel(); speechSynthesis.speak(u); }
+    try { if(speechSynthesis.speaking) speechSynthesis.cancel(); speechSynthesis.speak(u); }
     catch(e){ clearTimeout(timer); finish(); }
   }
   function playBuffer(buffer, next){
@@ -579,31 +643,47 @@
     extra = extra || {};
     var message = (extra.message || "").trim();
     var note = extra.note || null;
-    if(!message && !note){
-      if(!pitch){ if(done) done(false); return; }
-      if(!routeDirty){ playClipsOnly(pitch, loc, done); return; }
-      restorePlaybackRoute(function(){ playClipsOnly(pitch, loc, done); });
+    armPlayback();
+    if(pitch && !clipUrl[pitch] || loc && pitch && !clipUrl[loc]){
+      setStatus("Clips still loading, try again", true);
+      if(done) done(false);
       return;
     }
-    if(pitch && !loaded){ setStatus("Clips still loading, try again", true); if(done) done(false); return; }
-    restorePlaybackRoute(function(){
-      var rounds = (settings.repeat && (pitch || message)) ? 2 : 1;
-      var round = 0;
-      function playRound(){
-        var end = scheduleBody(pitch, loc, round === 0);
-        var wait = Math.max(0, Math.ceil((end - ctx.currentTime) * 1000) + 40);
-        after(wait, function(){
+    var rounds = (settings.repeat && (pitch || message)) ? 2 : 1;
+    var round = 0;
+    var prerollObjectUrl = "";
+    function cleanup(){ if(prerollObjectUrl){ try{ URL.revokeObjectURL(prerollObjectUrl); }catch(e){} prerollObjectUrl = ""; } }
+    function finish(ok){ cleanup(); if(done) done(ok); }
+    function playRound(){
+      var queue = [];
+      if(round === 0 && settings.prerollType !== "off"){
+        prerollObjectUrl = makePrerollUrl();
+        queue.push({url: prerollObjectUrl, vol: 1, gapAfter: 0});
+      }
+      if(pitch){
+        queue.push({url: clipUrl[pitch], vol: null, gapAfter: loc ? settings.gap : 0});
+        if(loc) queue.push({url: clipUrl[loc], vol: null, gapAfter: 0});
+      }
+      var idx = 0;
+      function nextStep(){
+        if(idx >= queue.length){
           after(pitch && message ? settings.gap : 0, function(){
             speakText(message, function(){
               round++;
               if(round < rounds) after(450, playRound);
-              else after((pitch || message) && note ? settings.gap : 0, function(){ playNote(note, function(){ if(done) done(true); }); });
+              else after((pitch || message) && note ? settings.gap : 0, function(){
+                playUrl(notePlayUrl(note), null, function(){ finish(true); });
+              });
             });
           });
-        });
+          return;
+        }
+        var step = queue[idx++];
+        playUrl(step.url, step.vol, function(){ after(step.gapAfter, nextStep); });
       }
-      playRound();
-    });
+      nextStep();
+    }
+    playRound();
   }
 
   // ---------- Actions ----------
@@ -890,7 +970,7 @@
     rec.discard = false;
     rec.cancelStart = false;
     rec.starting = true;
-    try { if(navigator.audioSession) navigator.audioSession.type = "auto"; } catch(e){}
+    try { if(navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch(e){}
     var request;
     try { request = navigator.mediaDevices.getUserMedia({audio:true}); }
     catch(e){ rec.starting = false; micError(e); return; }
