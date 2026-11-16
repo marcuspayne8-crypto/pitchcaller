@@ -74,15 +74,12 @@
     display:flex; align-items:center; gap:8px; min-width:0; height:44px; overflow:hidden;
   }
   .mark{display:none;}
-  h1{margin:0; min-width:0; flex:1; display:flex; align-items:baseline; gap:5px; overflow:hidden;}
-  .salt{
+  h1{
+    margin:0; min-width:0; flex:1 1 auto;
     font-family:"Yellowtail","Segoe Script","Brush Script MT",cursive;
-    font-size:clamp(22px, 6vw, 32px); font-weight:400; line-height:1; color:#fff;
-    -webkit-text-stroke:1.3px var(--orange); paint-order:stroke fill; white-space:nowrap;
-  }
-  .phantoms{
-    font-size:clamp(10px, 2.7vw, 13px); font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
-    color:var(--muted); white-space:nowrap;
+    font-size:clamp(20px, 6.2vw, 32px); font-weight:400; line-height:1;
+    color:#fff; white-space:nowrap; overflow:hidden;
+    -webkit-text-stroke:1.15px var(--orange); paint-order:stroke fill;
   }
   #msgBtn{
     height:32px; flex:none; border-radius:10px; padding:0 8px;
@@ -319,7 +316,7 @@
     .locFull{display:inline;}
     .locShort{display:none;}
     .mark{display:block; width:36px; height:36px; flex:none; border-radius:50%;}
-    .phantoms{font-size:12px;}
+    h1{font-size:clamp(22px, 3vw, 34px);}
     #msgBtn .msgShort{display:none;}
     #msgBtn .msgFull{display:inline;}
   }
@@ -360,7 +357,7 @@
   <div id="micBanner" hidden>MIC OFF</div>
   <header>
     <img class="mark" src="icons/sl-logo.png" width="64" height="64" alt="">
-    <h1><span class="salt">Salt Lake</span><span class="phantoms">Phantoms</span></h1>
+    <h1>Salt Lake Phantoms</h1>
     <span id="appVersion"></span>
     <button type="button" id="msgBtn" aria-label="Message">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
@@ -544,7 +541,7 @@
     {id:"calm", label:"Calm"},
     {id:"cowboy", label:"Cowboy"}
   ];
-  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.4";
+  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.5";
   var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false, talkToggle:false};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
