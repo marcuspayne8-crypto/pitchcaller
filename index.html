@@ -317,7 +317,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.6";
+  var VERSION = "v1.7";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -515,32 +515,41 @@
     armPlayback();
     if(done) done();
   }
+  var player = document.createElement("audio");
+  player.id = "callPlayer";
+  player.setAttribute("playsinline", "");
+  player.setAttribute("webkit-playsinline", "");
+  player.preload = "auto";
+  player.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none";
+  document.body.appendChild(player);
+  var playerGen = 0;
   function playUrl(url, volume, next){
+    var gen = ++playerGen;
     if(!url){ next(); return; }
-    var audio = new Audio();
-    audio.preload = "auto";
-    audio.setAttribute("playsinline", "");
-    audio.setAttribute("webkit-playsinline", "");
-    audio.volume = Math.max(0, Math.min(1, volume == null ? settings.vol/100 : volume));
     var finished = false;
-    var timer = setTimeout(finish, 20000);
+    var timer = setTimeout(function(){ finish(); }, 20000);
     function finish(){
-      if(finished) return;
+      if(finished || gen !== playerGen) return;
       finished = true;
       clearTimeout(timer);
-      try { audio.pause(); } catch(e){}
-      audio.onended = null; audio.onerror = null;
+      player.onended = null; player.onerror = null;
       next();
     }
-    audio.onended = finish;
-    audio.onerror = function(){
-      var media = audio.error;
+    player.onended = null; player.onerror = null;
+    try { player.pause(); } catch(e){}
+    player.volume = Math.max(0, Math.min(1, volume == null ? settings.vol/100 : volume));
+    player.onended = function(){ if(gen === playerGen) finish(); };
+    player.onerror = function(){
+      if(gen !== playerGen) return;
+      var media = player.error;
       setStatus("Play error: " + (media && (media.message || media.code) || "media"), true);
       finish();
     };
-    audio.src = url;
-    var started = audio.play();
+    if(player.src !== url) player.src = url;
+    else { try { player.currentTime = 0; } catch(e){} }
+    var started = player.play();
     if(started && started.catch) started.catch(function(err){
+      if(gen !== playerGen) return;
       setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
       finish();
     });
@@ -626,86 +635,6 @@
     }
     return {utts: utts, paused: paused};
   }
-  function primeNote(note){
-    var url = notePlayUrl(note);
-    if(!url) return null;
-    var audio = new Audio();
-    audio.preload = "auto";
-    audio.setAttribute("playsinline", "");
-    audio.setAttribute("webkit-playsinline", "");
-    audio.volume = Math.max(0, Math.min(1, settings.vol/100));
-    audio.src = url;
-    var gate = {release:false, audio:audio};
-    var started = audio.play();
-    if(started && started.then){
-      started.then(function(){
-        if(!gate.release){
-          audio.pause();
-          try { audio.currentTime = 0; } catch(e){}
-        }
-      }).catch(function(err){
-        setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
-      });
-    }
-    return gate;
-  }
-  function playPrimed(gate, next){
-    if(!gate || !gate.audio){ next(); return; }
-    var audio = gate.audio;
-    gate.release = true;
-    var finished = false;
-    var timer = setTimeout(finish, 20000);
-    function finish(){
-      if(finished) return;
-      finished = true;
-      clearTimeout(timer);
-      next();
-    }
-    audio.onended = finish;
-    audio.onerror = function(){
-      var media = audio.error;
-      setStatus("Play error: " + (media && (media.message || media.code) || "media"), true);
-      finish();
-    };
-    try { audio.currentTime = 0; } catch(e){}
-    var started = audio.play();
-    if(started && started.catch) started.catch(function(err){
-      setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
-      finish();
-    });
-  }
-  function playBuffer(buffer, next){
-    var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
-    var s = ctx.createBufferSource(); s.buffer = buffer; s.connect(out);
-    var start = ctx.currentTime + 0.03; s.start(start);
-    setTimeout(next, Math.ceil(buffer.duration * 1000) + 80);
-  }
-  function playNote(note, next){
-    if(!note){ next(); return; }
-    if(note.raw){
-      decode(note.raw.slice(0)).then(function(buf){ playBuffer(buf, next); }).catch(function(){
-        if(note.url) playElement(note, next); else next();
-      });
-      return;
-    }
-    if(note.buffer) playBuffer(note.buffer, next);
-    else if(note.url) playElement(note, next);
-    else next();
-  }
-  function playElement(note, next){
-    var audio = new Audio(note.url);
-    try {
-      var node = ctx.createMediaElementSource(audio);
-      var g = ctx.createGain(); g.gain.value = Math.max(0, Math.min(2, settings.vol/100));
-      node.connect(g); g.connect(ctx.destination);
-    } catch(e){}
-    var done = false;
-    function finish(){ if(done) return; done = true; try{ audio.pause(); }catch(err){} next(); }
-    audio.onended = finish; audio.onerror = finish;
-    var play = audio.play();
-    if(play && play.catch) play.catch(finish);
-    setTimeout(finish, 16000);
-  }
   function after(ms, next){ if(ms>0) setTimeout(next, ms); else next(); }
   function scheduleBody(pitch, loc, includePreroll){
     var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
@@ -732,7 +661,7 @@
     var speechTimes = (sayTwice && message) ? 2 : (message ? 1 : 0);
     var clipRounds = (sayTwice && pitch) ? 2 : (pitch ? 1 : 0);
     var speech = speechTimes ? primeSpeech(message, speechTimes, !!pitch) : null;
-    var noteGate = note ? primeNote(note) : null;
+    var noteUrl = note && note.url;
     var prerollObjectUrl = settings.prerollType !== "off" ? makePrerollUrl() : "";
     function cleanup(){ if(prerollObjectUrl){ try{ URL.revokeObjectURL(prerollObjectUrl); }catch(e){} prerollObjectUrl = ""; } }
     function finish(ok){ cleanup(); if(done) done(ok); }
@@ -751,8 +680,8 @@
       step();
     }
     function playNoteDone(){
-      after((pitch || message) && note ? settings.gap : 0, function(){
-        playPrimed(noteGate, function(){ finish(true); });
+      after((pitch || message) && noteUrl ? settings.gap : 0, function(){
+        playUrl(noteUrl, null, function(){ finish(true); });
       });
     }
     function afterUtterance(index, next){
@@ -943,7 +872,73 @@
     $("recTime").textContent = "0:" + (whole < 10 ? "0" : "") + whole;
   }
   function releaseMic(){
-    if(rec.stream){ rec.stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} }); rec.stream = null; }
+    var stream = rec.stream;
+    rec.stream = null;
+    if(!stream) return;
+    stream.getTracks().forEach(function(t){
+      try { t.enabled = false; } catch(e){}
+      try { t.stop(); } catch(e){}
+    });
+  }
+  function decodeArrayBuffer(ab){
+    function run(node){
+      return new Promise(function(res, rej){
+        var copy = ab.slice(0);
+        var p = node.decodeAudioData(copy, res, rej);
+        if(p && p.then) p.then(res, rej);
+      });
+    }
+    var jobs = [];
+    try { jobs.push(run(new OfflineAudioContext(1, 1, 44100))); } catch(e){}
+    if(ctx) jobs.push(run(ctx));
+    function attempt(i){
+      if(i >= jobs.length) return Promise.reject(new Error("decode failed"));
+      return jobs[i].catch(function(){ return attempt(i + 1); });
+    }
+    return attempt(0);
+  }
+  function toPlayableWav(audioBuffer){
+    var rate = (audioBuffer.sampleRate === 22050 || audioBuffer.sampleRate === 44100) ? audioBuffer.sampleRate : 44100;
+    var frames = Math.max(1, Math.ceil(audioBuffer.duration * rate));
+    var offline = new OfflineAudioContext(1, frames, rate);
+    var src = offline.createBufferSource();
+    src.buffer = audioBuffer;
+    src.connect(offline.destination);
+    src.start(0);
+    return offline.startRendering().then(function(rendered){
+      var pcm = rendered.getChannelData(0);
+      var peak = 0, i, s;
+      for(i=0;i<pcm.length;i++){ s = pcm[i] < 0 ? -pcm[i] : pcm[i]; if(s > peak) peak = s; }
+      var gain = peak > 0.00001 ? 0.8912509381337456 / peak : 1;
+      var out = new Float32Array(pcm.length);
+      for(i=0;i<pcm.length;i++){
+        s = pcm[i] * gain;
+        out[i] = s > 1 ? 1 : (s < -1 ? -1 : s);
+      }
+      var wav = encodeWav([out], rate);
+      var playBuf = null;
+      try {
+        ensureCtx();
+        playBuf = ctx.createBuffer(1, out.length, rate);
+        playBuf.getChannelData(0).set(out);
+      } catch(e){ playBuf = rendered; }
+      return {wav: wav, buffer: playBuf, secs: rendered.duration};
+    });
+  }
+  function storeWavNote(packed, fallbackSecs){
+    if(rec.discard){ rec.discard = false; return; }
+    var url = URL.createObjectURL(new Blob([packed.wav], {type:"audio/wav"}));
+    if(state.note && state.note.url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
+    state.note = {
+      url: url,
+      buffer: packed.buffer,
+      secs: Math.min(REC_MAX, Math.max(1, Math.round(packed.secs || fallbackSecs || 1))),
+      mime: "audio/wav"
+    };
+    render();
+  }
+  function convertBufferToNote(audioBuffer, fallbackSecs){
+    return toPlayableWav(audioBuffer).then(function(packed){ storeWavNote(packed, fallbackSecs); });
   }
   function startWavCapture(stream){
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -968,10 +963,21 @@
     var wavCtx = rec.wavCtx; rec.wavCtx = null; rec.wavProc = null; rec.wavSource = null; rec.wavChunks = null;
     if(wavCtx){ try{ wavCtx.close(); }catch(e){} }
     releaseMic();
+    setAudioSession("playback");
     if(discard || !chunks.length){ rec.discard = false; restorePlaybackRoute(); return; }
-    var raw = encodeWav(chunks, rate);
     var secs = (Date.now() - rec.startedAt) / 1000;
-    restorePlaybackRoute(function(){ acceptNote(raw, new Blob([raw], {type:"audio/wav"}), secs, "audio/wav"); });
+    var len = 0, c;
+    for(c=0;c<chunks.length;c++) len += chunks[c].length;
+    var pcm = new Float32Array(len), off = 0;
+    for(c=0;c<chunks.length;c++){ pcm.set(chunks[c], off); off += chunks[c].length; }
+    ensureCtx();
+    var audioBuffer = ctx.createBuffer(1, pcm.length || 1, rate);
+    audioBuffer.getChannelData(0).set(pcm);
+    restorePlaybackRoute(function(){
+      convertBufferToNote(audioBuffer, secs).catch(function(e){
+        setStatus("Recording decode error: " + ((e && e.name) || "Error") + (e && e.message ? " " + e.message : ""), true);
+      });
+    });
   }
   function finishMediaRecorder(){
     var chunks = rec.chunks || [];
@@ -980,13 +986,15 @@
     var secs = (Date.now() - rec.startedAt) / 1000;
     rec.chunks = [];
     releaseMic();
+    setAudioSession("playback");
     if(discard || !chunks.length){ rec.discard = false; restorePlaybackRoute(); return; }
     var blob = new Blob(chunks, {type: mime});
     restorePlaybackRoute(function(){
-      blob.arrayBuffer().then(function(ab){
-        var raw = ab.slice(0);
-        decode(raw.slice(0)).then(function(){ acceptNote(raw, blob, secs, mime); }).catch(function(){ acceptNote(raw, blob, secs, mime); });
-      }).catch(function(){ setStatus("Could not use that recording", true); });
+      blob.arrayBuffer().then(function(ab){ return decodeArrayBuffer(ab); }).then(function(audioBuffer){
+        return convertBufferToNote(audioBuffer, secs);
+      }).catch(function(e){
+        setStatus("Recording decode error: " + ((e && e.name) || "Error") + (e && e.message ? " " + e.message : ""), true);
+      });
     });
   }
   function stopRecording(){

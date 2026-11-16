@@ -1,4 +1,4 @@
-const CACHE = "pitchcaller-v1.6";
+const CACHE = "pitchcaller-v1.7";
 const ASSETS = [
   "./",
   "index.html",
