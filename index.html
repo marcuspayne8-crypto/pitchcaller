@@ -24,211 +24,235 @@
     src: url("fonts/yellowtail-latin.woff2") format("woff2");
   }
   :root{
-    --bg:#0c0c0e;
-    --surface:#e7e7ea;
-    --surface-text:#16161a;
-    --text:#f3f3f5;
-    --muted:#9a9aa3;
-    --line:#2a2a2e;
-    --orange:#E8742A;
-    --orange-ink:#1a120c;
-    --brand:#CC3D2E;
-    --radius:22px;
+    --bg:#0B0B0B;
+    --surface:#1A1A1A;
+    --border:#4A4A4A;
+    --text:#F5F5F5;
+    --muted:#C8C8C8;
+    --orange:#FF8500;
+    --ink:#0B0B0B;
+    --live:#C41010;
+    --radius:16px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
-  html,body{margin:0; height:100%; background:var(--bg); color:var(--text);}
-  html{overflow:hidden;}
-  body{
-    display:flex; flex-direction:column;
-    height:100%;
+  html,body{
+    margin:0; background:var(--bg); color:var(--text);
     height:100vh;
-    height:var(--app-h, 100svh);
+    height:100dvh;
+    max-height:100dvh;
     overflow:hidden;
-    margin-top:var(--vv-top, 0px);
+  }
+  body{
+    display:grid;
+    grid-template-rows:minmax(0,1fr);
     padding:
-      max(8px, env(safe-area-inset-top))
-      max(12px, env(safe-area-inset-right))
-      0
-      max(12px, env(safe-area-inset-left));
-    gap:8px; overscroll-behavior:none; touch-action:manipulation;
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
   }
-  header{display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; min-width:0;}
-  .brand{display:flex; align-items:center; gap:10px; min-width:0; flex:1;}
-  .mark{width:48px; height:48px; flex:none; display:block; border-radius:50%;}
-  .brandText{min-width:0;}
-  h1{margin:0; font:inherit; min-width:0;}
-  .team{
-    display:block;
-    font-family:"Yellowtail","Segoe Script","Brush Script MT",cursive;
-    font-size:clamp(28px, 6.6vw, 52px);
-    font-weight:400;
-    line-height:1.05;
-    letter-spacing:0.01em;
-    color:#f5f5f6;
-    -webkit-text-stroke:2.5px var(--orange);
-    paint-order:stroke fill;
-    padding:2px 2px 0 0;
-  }
-  .teamLine{display:inline-block; white-space:nowrap;}
-  .sub{
-    display:block;
-    margin-top:3px;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:0.18em;
-    text-transform:uppercase;
-    color:#c8c8ce;
-    -webkit-text-stroke:0;
-  }
-  #status{
-    font-size:12px; line-height:1.35; color:var(--muted); font-weight:600;
-    min-height:1.35em; max-height:4.05em; overflow:auto; text-align:center;
-    overflow-wrap:anywhere; flex:none;
-  }
-  #status.err{color:var(--brand); font-weight:700;}
+  button,input,.pitch,.loc{touch-action:manipulation;}
   button{
-    font:inherit; color:var(--surface-text); background:var(--surface); border:0; border-radius:var(--radius);
-    cursor:pointer; touch-action:manipulation;
+    font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); cursor:pointer; touch-action:manipulation;
   }
-  button:active{transform:scale(0.985);}
-  #talkBtn:active{transform:none;}
+  #screen{
+    position:relative;
+    min-height:0; height:100%;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:44px 88px minmax(0,1fr) 28px 56px 8px 100px;
+    gap:6px;
+    padding:4px 8px 6px;
+  }
+  #board,#dock{display:contents;}
+  header,#pitchBox,#locBox,#callStatus,#sendRow,#outLevel,#talkSlot{min-height:0;}
+  header{
+    display:flex; align-items:center; gap:8px; min-width:0; height:44px; overflow:hidden;
+  }
+  .mark{width:32px; height:32px; flex:none; border-radius:50%; display:block;}
+  h1{margin:0; min-width:0; flex:1; display:flex; align-items:baseline; gap:6px; overflow:hidden;}
+  .salt{
+    font-family:"Yellowtail","Segoe Script","Brush Script MT",cursive;
+    font-size:clamp(26px, 7vw, 34px); font-weight:400; line-height:1; color:#fff;
+    -webkit-text-stroke:1.4px var(--orange); paint-order:stroke fill; white-space:nowrap;
+  }
+  .phantoms{
+    font-size:10px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--muted); white-space:nowrap;
+  }
+  #aaBtn{
+    width:36px; height:32px; flex:none; border-radius:10px; padding:0;
+    background:var(--surface); color:var(--orange); border:1px solid var(--orange);
+    font-weight:800; font-size:14px; letter-spacing:-0.03em;
+  }
+  #aaBtn.has{background:var(--orange); color:var(--ink);}
+  #appVersion{font-size:11px; font-weight:800; color:var(--muted); letter-spacing:0.04em; flex:none;}
+  #updateBtn{
+    flex:none; max-width:72px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-size:10px; font-weight:750; padding:2px 6px; border-radius:999px;
+    background:transparent; color:var(--orange); border:1px solid var(--orange);
+  }
   #settingsBtn{
-    width:44px; height:44px; flex:none; padding:0; border-radius:50%;
-    display:grid; place-items:center;
-    background:transparent; color:var(--text);
-    border:1px solid rgba(255,255,255,.18);
+    width:34px; height:34px; flex:none; padding:0; border-radius:50%;
+    display:grid; place-items:center; background:transparent; color:var(--text);
+    border:1px solid var(--border);
   }
   #settingsBtn svg{display:block;}
-  #stage{
-    flex:1; min-height:0;
-    overflow-x:hidden; overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
-    display:flex; flex-direction:column; gap:8px;
+  #pitchBox,#locBox{min-height:0; min-width:0; overflow:hidden;}
+  #pitches{
+    height:100%; min-height:0;
+    display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:6px;
   }
-  #grids{
-    display:flex; flex-direction:column; gap:12px; flex:none; min-width:0;
-    padding-bottom:12px;
-  }
-  #dock{
-    position:sticky; bottom:0; z-index:5; flex:none;
-    display:flex; flex-direction:column; gap:6px;
-    background:var(--bg);
-    border-top:1px solid var(--line);
-    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
-  }
-  section{display:flex; flex-direction:column; gap:8px; flex:none; min-width:0;}
-  .label{font-size:12px; color:var(--muted); font-weight:700; letter-spacing:0.16em; text-transform:uppercase;}
-  #pitches{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%;}
   .pitch{
-    min-height:56px; font-size:clamp(16px, 4.2vw, 28px); font-weight:750;
-    padding:8px 6px; line-height:1.1; text-align:center;
+    min-height:0; height:100%; padding:4px 3px;
+    background:var(--surface); color:var(--text); border:1px solid var(--border);
+    font-size:clamp(11px, 3vw, 16px); font-weight:750; line-height:1.05; text-align:center;
     display:flex; align-items:center; justify-content:center;
-    white-space:normal;
+    white-space:normal; overflow:hidden; border-radius:14px;
   }
   #locGrid{
-    display:grid;
-    grid-template-columns:max-content repeat(3, minmax(0, 1fr));
-    grid-template-rows:auto repeat(3, minmax(44px, auto));
-    gap:6px; width:100%;
+    height:100%; min-height:0;
+    display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); grid-template-rows:repeat(3, minmax(0,1fr));
+    gap:8px;
   }
-  .axis{
-    font-size:10px; color:var(--muted); font-weight:700;
-    display:flex; align-items:center; justify-content:center;
-    letter-spacing:0.04em; white-space:nowrap; padding:0 2px;
-  }
-  .axisY{writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; letter-spacing:0.02em;}
   .loc{
-    min-height:44px; font-size:clamp(11px, 2.7vw, 16px); font-weight:750;
-    padding:4px 3px; line-height:1.15; text-align:center;
+    min-height:0; height:100%; padding:2px;
+    background:var(--surface); color:var(--text); border:1px solid var(--border);
+    font-size:clamp(12px, 3.1vw, 18px); font-weight:750; line-height:1.05; text-align:center;
     display:flex; align-items:center; justify-content:center;
-    white-space:normal; overflow:visible;
+    white-space:nowrap; overflow:hidden; border-radius:14px;
   }
-  .locFull,.locShort{pointer-events:none;}
-  .locShort{display:none;}
-  .sel{background:var(--orange)!important; color:var(--orange-ink)!important; box-shadow:0 8px 22px rgba(232,116,42,.28);}
-  #composer{display:flex; flex-direction:column; gap:6px;}
+  .locFull{display:none;}
+  .locShort{display:inline;}
+  .sel{
+    background:var(--orange)!important; color:var(--ink)!important; font-weight:800;
+    border-color:var(--orange)!important; box-shadow:0 0 0 2px var(--text);
+  }
+  #callStatus{
+    height:28px; min-height:0; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:750; color:var(--text); letter-spacing:-0.01em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 4px;
+  }
+  #callStatus.err{color:#ffb4a8;}
+  #sendRow{display:grid; grid-template-columns:minmax(72px,1fr) minmax(200px,2.4fr); gap:8px; min-height:0;}
+  #clearBtn,#sendBtn{height:56px; min-height:56px; border-radius:14px; font-weight:800;}
+  #clearBtn{background:var(--surface); color:var(--text); border:1px solid var(--border); font-size:16px;}
+  #sendBtn{background:var(--orange); color:var(--ink); border-color:var(--orange); font-size:clamp(20px, 5vw, 28px); letter-spacing:0.08em;}
+  #sendBtn:disabled{background:#2A2A2A; color:#B0B0B0; border-color:#2A2A2A; box-shadow:none;}
+  #sendBtn.playing{background:#fff; color:var(--ink);}
+  #outLevel{height:8px; min-height:8px; display:flex; align-items:center;}
+  #outMeter{flex:1; height:8px; border-radius:99px; background:#2A2A2A; overflow:hidden;}
+  #outMeterBar{display:block; height:100%; width:0; background:var(--orange);}
+  #talkSlot{min-height:0; display:flex; align-items:flex-end; padding-top:12px;}
+  #talkBtn{
+    width:100%; height:84px; min-height:84px; max-height:84px;
+    background:#1A1A1A; color:#FF8500; border-radius:18px;
+    box-shadow:inset 0 0 0 3px #FF8500; border:0;
+    font-size:clamp(16px, 4.4vw, 22px); font-weight:800; letter-spacing:0.08em;
+    display:flex; align-items:center; justify-content:center;
+    transform:none; transition:none; position:relative;
+    touch-action:none; -webkit-user-select:none; user-select:none;
+  }
+  #talkBtnLabel{line-height:1; white-space:nowrap;}
+  #talkLive{display:none !important;}
+  #talkBtn.holding, #talkBtn.holding:active{
+    background:#FF8500; color:#0B0B0B;
+    box-shadow:inset 0 6px 16px rgba(0,0,0,.35);
+    transform:scale(0.97);
+  }
+  #talkBtn.live, #talkBtn.live:active{
+    background:#C41010; color:#fff; font-weight:800;
+    box-shadow:none; transform:scale(0.97);
+  }
+  #talkBtn.live::after{
+    content:""; position:absolute; inset:-4px; border-radius:22px;
+    border:4px solid #FF3B30; pointer-events:none;
+    animation:talkRing 1.2s ease-out infinite;
+  }
+  @keyframes talkRing{
+    0%{opacity:1; transform:scale(1);}
+    100%{opacity:0; transform:scale(1.04);}
+  }
+  #txBanner,#micBanner{
+    position:absolute; left:8px; right:8px; top:48px; z-index:6; height:28px;
+    display:flex; align-items:center; justify-content:center;
+    background:#C41010; color:#fff; font-size:13px; font-weight:800; letter-spacing:0.14em;
+    border-radius:8px; pointer-events:none;
+  }
+  #micBanner{background:#1A1A1A; color:#FF8500; border:1px solid #FF8500;}
+  #txBanner[hidden],#micBanner[hidden],#toast[hidden]{display:none !important;}
+  #toast{
+    position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    z-index:40; max-width:calc(100% - 32px);
+    background:#FF8500; color:#0B0B0B; font-weight:800; font-size:15px;
+    padding:10px 16px; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  body.flash::after{
+    content:""; position:fixed; inset:0; z-index:23; pointer-events:none;
+    background:rgba(255,133,0,.38);
+  }
+  #msgSheet{
+    position:fixed; inset:0; z-index:25;
+    display:flex; align-items:flex-end; justify-content:center;
+    background:rgba(0,0,0,0); visibility:hidden; pointer-events:none;
+  }
+  #msgSheet.open{background:rgba(0,0,0,.62); visibility:visible; pointer-events:auto;}
+  #msgPanel{
+    width:min(560px, 100%);
+    max-height:92dvh;
+    background:#1A1A1A; color:var(--text);
+    border-radius:24px 24px 0 0;
+    padding:8px 16px calc(16px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:12px;
+    transform:translateY(105%);
+    transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    box-shadow:0 -16px 40px rgba(0,0,0,.45);
+  }
+  #msgSheet.open #msgPanel{transform:translateY(0);}
+  #msgPanel h2{margin:0; font-size:20px; font-weight:800;}
+  #msgPanel .handle{background:#4A4A4A;}
+  #composer{display:flex; flex-direction:column; gap:8px;}
   #msgRow{display:flex; align-items:center; gap:8px;}
   #customMsg{
-    flex:1; min-width:0; height:44px; border:0; border-radius:14px;
-    background:#1c1c21; color:#fff; padding:0 14px; font:inherit; font-size:16px;
-    user-select:text; -webkit-user-select:text;
+    flex:1; min-width:0; height:48px; border:1px solid var(--border); border-radius:12px;
+    background:#0B0B0B; color:#fff; padding:0 12px; font:inherit; font-size:16px;
+    user-select:text; -webkit-user-select:text; touch-action:manipulation;
   }
-  #customMsg::placeholder{color:#8d8d96;}
-  #msgClear, #recBtn, #noteDelete{
-    width:44px; height:44px; flex:none; padding:0; border-radius:14px;
-    display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;
+  #customMsg::placeholder{color:#C8C8C8;}
+  #msgClear,#recBtn,#noteDelete{
+    width:48px; height:48px; flex:none; padding:0; border-radius:12px;
+    display:grid; place-items:center; background:#2A2A2A; color:#F5F5F5; border:1px solid var(--border);
   }
-  #msgClear[hidden], #recLive[hidden], #noteRow[hidden]{display:none !important;}
-  #recBtn.rec{background:var(--brand); color:#fff;}
-  #recLive{display:flex; align-items:center; gap:8px; min-height:18px; font-size:13px; font-weight:750; color:#fff;}
-  .recDot{width:8px; height:8px; border-radius:50%; background:var(--brand); flex:none;}
-  #recMeter{flex:1; max-width:140px; height:8px; border-radius:99px; background:#2a2a2e; overflow:hidden;}
+  #msgClear[hidden],#recLive[hidden],#noteRow[hidden]{display:none !important;}
+  #recBtn.rec{background:#C41010; color:#fff; border-color:#C41010;}
+  #recLive,#noteRow{display:flex; align-items:center; gap:8px; min-height:28px; font-size:14px; font-weight:750;}
+  .recDot{width:8px; height:8px; border-radius:50%; background:#C41010; flex:none;}
+  #recMeter{flex:1; max-width:160px; height:8px; border-radius:99px; background:#2A2A2A; overflow:hidden;}
   #recMeterBar{display:block; height:100%; width:0; background:var(--orange);}
-  #noteRow{display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:700;}
-  #notePlay, #noteDelete{width:32px; height:32px; border-radius:10px; padding:0; display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;}
-  #versionLine{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:2px;}
-  #appVersion{font-size:12px; font-weight:800; letter-spacing:0.08em; color:#c8c8ce;}
-  #updateBtn{font-size:12px; font-weight:750; padding:4px 8px; border-radius:999px; background:transparent; color:var(--orange); border:1px solid var(--orange);}
-  #outLevel{display:flex; align-items:center; gap:8px; flex:none; min-height:18px;}
-  #outLevelLabel, #outLevelMode{font-size:11px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); flex:none;}
-  #outLevelMode{color:var(--orange); letter-spacing:0.08em;}
-  #outMeter{flex:1; height:8px; border-radius:99px; background:#1c1c21; overflow:hidden;}
-  #outMeterBar{display:block; height:100%; width:0; background:var(--orange);}
-  #talkBtn{
-    height:64px; min-height:64px; max-height:64px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:0; padding:4px 12px;
-    background:var(--orange); color:var(--orange-ink); border-radius:22px;
-    touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
-  }
-  #talkBtnLabel{
-    font-size:20px; font-weight:800; letter-spacing:0.04em; line-height:1;
-    height:22px; display:flex; align-items:center; justify-content:center;
-  }
-  #talkBtn.live{background:var(--brand); color:#fff;}
-  #talkLive{
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    height:16px; min-height:16px; max-height:16px;
-    font-size:11px; font-weight:800; letter-spacing:0.14em; color:#fff;
-    visibility:hidden;
-  }
-  #talkBtn.live #talkLive{visibility:visible;}
-  #preview{
-    font-size:16px; font-weight:750; text-align:center; letter-spacing:-0.02em;
-    line-height:1.25; min-height:1.25em; max-height:2.5em; overflow:hidden; flex:none;
-  }
-  #preview.empty{color:var(--muted); font-weight:600; font-size:15px;}
+  #notePlay,#noteDelete{width:36px; height:36px; border-radius:10px;}
+  #msgActions{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  #msgActions button{height:48px; font-weight:800; font-size:14px;}
+  #addMsg{background:#2A2A2A; color:#F5F5F5; border:1px solid var(--border);}
+  #sendMsgNow{background:var(--orange); color:var(--ink); border-color:var(--orange);}
+  #sendMsgNow:disabled{background:#2A2A2A; color:#B0B0B0; border-color:#2A2A2A;}
   #voiceBar{
-    display:flex; gap:6px; overflow-x:auto; overflow-y:hidden; flex:none; flex-wrap:nowrap;
-    min-width:0; padding-bottom:2px;
-    -webkit-overflow-scrolling:touch; scrollbar-width:none;
-    touch-action:pan-x;
+    display:flex; gap:6px; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
   }
   #voiceBar::-webkit-scrollbar{display:none;}
   .voicePill{
-    flex:none; padding:7px 12px; border-radius:999px; font-size:13px; font-weight:750;
-    background:#1c1c21; color:#d7d7dc; border:1px solid #2e2e34;
+    flex:none; padding:8px 12px; border-radius:999px; font-size:14px; font-weight:750;
+    background:#fff; color:#17171a; border:1px solid #d9d9e0;
   }
-  .voicePill.on{background:var(--orange); color:var(--orange-ink); border-color:var(--orange);}
-  #sendRow{display:grid; grid-template-columns:minmax(96px,.72fr) 2.2fr; gap:8px; flex:none;}
-  #clearBtn{font-size:16px; font-weight:750; letter-spacing:0.06em; min-height:56px; line-height:1; background:#2a2a2e; color:#f3f3f5;}
-  #sendBtn{
-    font-size:clamp(22px, 5.5vw, 36px); font-weight:800; letter-spacing:0.12em; min-height:56px; line-height:1;
-    background:var(--orange); color:var(--orange-ink);
-  }
-  #sendBtn:disabled{background:#232328; color:#6d6d76; box-shadow:none;}
-  #sendBtn.playing{background:var(--brand); color:#fff;}
-  #lastSent{font-size:13px; color:var(--muted); text-align:center; line-height:1.3; max-height:2.6em; overflow:hidden; font-weight:600; flex:none;}
-  #lastSent:empty{display:none;}
-  #lastSent b{color:#fff; font-weight:750;}
+  .voicePill.on{background:var(--orange); color:var(--ink); border-color:var(--orange);}
   #settings{
     position:fixed; inset:0; z-index:20;
     display:flex; align-items:flex-end; justify-content:center;
-    background:rgba(0,0,0,0);
-    visibility:hidden; pointer-events:none;
+    background:rgba(0,0,0,0); visibility:hidden; pointer-events:none;
     transition:background .28s ease, visibility .28s;
   }
   #settings.open{background:rgba(0,0,0,.62); visibility:visible; pointer-events:auto;}
@@ -252,90 +276,95 @@
   .row label{font-weight:700; font-size:16px;}
   .row .hint{font-size:13px; color:#5e5e68; line-height:1.4;}
   .seg{display:flex; gap:8px;}
-  .sheet button{
-    background:#fff; color:#17171a; border:1px solid #d9d9e0; border-radius:14px; font-weight:700;
-  }
+  .sheet button{background:#fff; color:#17171a; border:1px solid #d9d9e0; border-radius:14px; font-weight:700;}
   .seg button{flex:1; padding:12px; font-size:15px;}
-  .sheet .sel{background:var(--orange)!important; color:var(--orange-ink)!important; border-color:var(--orange)!important; box-shadow:none;}
+  .sheet .sel{background:var(--orange)!important; color:var(--ink)!important; border-color:var(--orange)!important; box-shadow:none;}
   input[type=range]{width:100%; height:36px; accent-color:var(--orange);}
   .sheetBtns{display:flex; gap:10px; flex-wrap:wrap;}
   .sheetBtns button{flex:1; padding:14px; font-size:16px;}
-  #closeSettings{background:var(--orange); color:var(--orange-ink); border-color:var(--orange);}
+  #closeSettings{background:var(--orange); color:var(--ink); border-color:var(--orange);}
   .toggle{display:flex; align-items:center; gap:10px; font-weight:700;}
   .toggle input{width:24px; height:24px; accent-color:var(--orange);}
   select{
     font:inherit; font-size:16px; height:44px; border-radius:12px;
     border:1px solid #d9d9e0; background:#fff; color:#17171a; padding:0 10px;
   }
-  @media (max-width: 520px){
-    .loc{white-space:nowrap; font-size:12px; padding:4px 2px;}
-    .locFull{display:none;}
-    .locShort{display:inline;}
+  @media (min-width: 768px) and (orientation: portrait){
+    body{padding:20px;}
+    #screen{width:min(600px, 100%); margin:0 auto; padding:0;}
+    .loc{font-size:16px;}
+    .locFull{display:inline;}
+    .locShort{display:none;}
+    .phantoms{font-size:12px;}
   }
-  @media (min-width: 800px){
-    .mark{width:64px; height:64px;}
-    body{padding-left:max(20px, env(safe-area-inset-left)); padding-right:max(20px, env(safe-area-inset-right)); gap:12px;}
-    .pitch{min-height:64px; font-size:clamp(20px, 2.4vw, 30px);}
-    .loc{min-height:52px; font-size:16px;}
-    #sendBtn, #clearBtn{min-height:64px;}
-    #talkBtn{height:72px; min-height:72px; max-height:72px;}
+  @media (min-width: 900px) and (min-height: 600px) and (orientation: landscape){
+    body{padding:20px;}
+    #screen{
+      width:100%; max-width:none; margin:0;
+      grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);
+      grid-template-rows:44px minmax(0,1fr);
+      gap:16px 20px;
+      padding:0;
+    }
+    header{grid-column:1 / -1; grid-row:1;}
+    #board{
+      display:grid; grid-column:1; grid-row:2;
+      grid-template-rows:96px minmax(0,1fr); gap:12px; min-height:0;
+    }
+    #dock{
+      display:grid; grid-column:2; grid-row:2; align-self:end; min-height:0;
+      grid-template-rows:28px 56px 8px 100px; gap:8px;
+    }
+    .pitch{font-size:18px;}
+    .loc{font-size:16px;}
+    .locFull{display:inline;}
+    .locShort{display:none;}
+    #txBanner,#micBanner{top:52px; left:0; right:auto; width:42%;}
   }
-  @media (min-width: 900px) and (min-height: 700px){
-    #grids{display:grid; grid-template-columns:1fr 1.08fr; gap:12px 28px; align-items:start;}
-  }
-  @media (max-height: 700px){
-    body{gap:6px;}
-    .team{font-size:clamp(22px, 5.6vw, 34px); -webkit-text-stroke:2px var(--orange);}
-    #sendBtn, #clearBtn{min-height:52px;}
-    #talkBtn{height:56px; min-height:56px; max-height:56px;}
-    #talkBtnLabel{font-size:18px; height:20px;}
-    #dock{gap:5px; padding-top:6px;}
-  }
+
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">
+<div id="toast" hidden></div>
+<div id="screen">
+  <div id="txBanner" hidden>LIVE TO CATCHER</div>
+  <div id="micBanner" hidden>MIC OFF</div>
+  <header>
     <img class="mark" src="icons/sl-logo.png" width="64" height="64" alt="Salt Lake">
-    <div class="brandText">
-      <h1>
-        <span class="team"><span class="teamLine">Salt Lake</span> <span class="teamLine">Phantoms</span></span>
-        <span class="sub">Pitch Caller</span>
-      </h1>
-      <div id="versionLine">
-        <span id="appVersion"></span>
-        <button type="button" id="updateBtn" hidden>Update available - tap to refresh</button>
-      </div>
+    <h1><span class="salt">Salt Lake</span><span class="phantoms">Phantoms</span></h1>
+    <button type="button" id="aaBtn" aria-label="Message">Aa</button>
+    <span id="appVersion"></span>
+    <button type="button" id="updateBtn" hidden>Update</button>
+    <button type="button" id="settingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path fill="currentColor" d="M19.14 12.94a7.5 7.5 0 0 0 .05-.94 7.5 7.5 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0-.05.94 7.5 7.5 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+      </svg>
+    </button>
+  </header>
+  <div id="board">
+    <section id="pitchBox"><div id="pitches"></div></section>
+    <section id="locBox"><div id="locGrid"></div></section>
+  </div>
+  <div id="dock">
+    <div id="callStatus">Select a pitch</div>
+    <div id="sendRow">
+      <button type="button" id="clearBtn">Clear</button>
+      <button type="button" id="sendBtn" disabled>SEND</button>
+    </div>
+    <div id="outLevel" aria-hidden="true"><span id="outMeter"><span id="outMeterBar"></span></span></div>
+    <div id="talkSlot">
+      <button type="button" id="talkBtn" aria-pressed="false">
+        <span id="talkBtnLabel">HOLD TO TALK</span>
+        <span id="talkLive" aria-hidden="true"></span>
+      </button>
     </div>
   </div>
-  <button type="button" id="settingsBtn" aria-label="Settings">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-      <path fill="currentColor" d="M19.14 12.94a7.5 7.5 0 0 0 .05-.94 7.5 7.5 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0-.05.94 7.5 7.5 0 0 0 .05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
-    </svg>
-  </button>
-</header>
-<div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
+</div>
 
-<main id="stage">
-  <div id="grids">
-    <section id="pitchBox">
-      <div class="label">Pitch</div>
-      <div id="pitches"></div>
-    </section>
-
-    <section id="locBox">
-      <div class="label">Location</div>
-      <div id="locGrid"></div>
-    </section>
-  </div>
-</main>
-
-<div id="dock">
-    <div id="outLevel">
-      <span id="outLevelLabel">Output level</span>
-      <span id="outMeter" aria-hidden="true"><span id="outMeterBar"></span></span>
-      <span id="outLevelMode"></span>
-    </div>
+<div id="msgSheet" role="dialog" aria-modal="true" aria-labelledby="msgTitle">
+  <div id="msgPanel">
+    <div class="handle" aria-hidden="true"></div>
+    <h2 id="msgTitle">Message</h2>
     <div id="composer">
       <div id="msgRow">
         <input id="customMsg" type="text" inputmode="text" enterkeyhint="done" maxlength="160" autocomplete="off" autocapitalize="sentences" placeholder="Custom message" aria-label="Custom message">
@@ -357,17 +386,12 @@
         </button>
       </div>
     </div>
-    <div id="preview" class="empty">Select a pitch</div>
-    <div id="status">Loading clips...</div>
-    <div id="sendRow">
-      <button type="button" id="clearBtn">Clear</button>
-      <button type="button" id="sendBtn" disabled>SEND</button>
+    <div id="msgActions">
+      <button type="button" id="addMsg">Add to next call</button>
+      <button type="button" id="sendMsgNow" disabled>Send message now</button>
     </div>
-    <button type="button" id="talkBtn" aria-pressed="false">
-      <span id="talkBtnLabel">Enable Talk</span>
-      <span id="talkLive" aria-hidden="true"><span class="recDot" aria-hidden="true"></span>Live</span>
-    </button>
-    <div id="lastSent"></div>
+    <button type="button" id="closeMsg">Done</button>
+  </div>
 </div>
 
 <div id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
@@ -377,6 +401,7 @@
 
     <div class="row">
       <label for="clipVoiceSel">Clip voice</label>
+      <div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
       <select id="clipVoiceSel"></select>
       <div class="hint">Pitch and location recordings. Typed messages and voice notes stay the same.</div>
     </div>
@@ -434,7 +459,12 @@
 
     <div class="row">
       <label class="toggle"><input type="checkbox" id="talkBeep"> Talk beep</label>
-      <div class="hint">A short soft beep when Hold to Talk starts, so the radio keys up. Off by default.</div>
+      <div class="hint">A short soft beep when Hold to Talk starts, so the radio keys up. Off by default. The catcher hears it, so leave it off unless you need it.</div>
+    </div>
+
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="talkToggle"> Tap to talk</label>
+      <div class="hint">Off by default. When on, tap Hold to Talk to start and tap again to stop.</div>
     </div>
 
     <div class="sheetBtns">
@@ -451,22 +481,6 @@
 <script>
 (function(){
   "use strict";
-  function fitViewport(){
-    var vv = window.visualViewport;
-    var h = vv ? vv.height : window.innerHeight;
-    var top = vv ? vv.offsetTop : 0;
-    var root = document.documentElement;
-    root.style.setProperty("--app-h", Math.round(h) + "px");
-    root.style.setProperty("--vv-top", Math.max(0, Math.round(top)) + "px");
-    var dock = document.getElementById("dock");
-    if(dock) root.style.setProperty("--dock-h", Math.ceil(dock.getBoundingClientRect().height) + "px");
-  }
-  fitViewport();
-  if(window.visualViewport){
-    visualViewport.addEventListener("resize", fitViewport);
-    visualViewport.addEventListener("scroll", fitViewport);
-  }
-  window.addEventListener("resize", fitViewport);
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -491,8 +505,8 @@
     {id:"calm", label:"Calm"},
     {id:"cowboy", label:"Cowboy"}
   ];
-  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.2";
-  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false};
+  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.3";
+  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false, talkToggle:false};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
   function save(){ try{ localStorage.setItem("pc-settings", JSON.stringify(settings)); }catch(e){} }
@@ -508,8 +522,16 @@
   var REC_MAX = 15;
   var rec = {active:false, starting:false, cancelStart:false, pendingStop:false, discard:false, startedAt:0, stream:null, recorder:null, chunks:[], timer:null, mode:"", mime:"", wavCtx:null, wavProc:null, wavSource:null, wavChunks:null};
   var $ = function(id){return document.getElementById(id);};
-  var statusEl = $("status");
-  function setStatus(t, err){ statusEl.textContent = t; statusEl.className = err ? "err" : ""; }
+  var statusEl = $("callStatus");
+  function setStatus(t, err){
+    if(!statusEl) return;
+    statusEl.textContent = t;
+    statusEl.className = err ? "err" : "";
+    clearTimeout(setStatus.timer);
+    if(err){
+      setStatus.timer = setTimeout(function(){ statusEl.className = ""; render(); }, 2500);
+    }
+  }
 
   // ---------- Build UI ----------
   var pitchBtns = {};
@@ -517,7 +539,6 @@
     var b = document.createElement("button");
     b.className = "pitch"; b.textContent = p.label;
     b.addEventListener("click", function(){
-      clearUnsentCustom();
       state.pitch = (state.pitch===p.id) ? null : p.id;
       render();
     });
@@ -525,10 +546,7 @@
   });
   var locBtns = {};
   var g = $("locGrid");
-  g.appendChild(document.createElement("div"));
-  COLS.forEach(function(c){ var d=document.createElement("div"); d.className="axis"; d.textContent=cap(c); g.appendChild(d); });
   ROWS.forEach(function(r){
-    var a=document.createElement("div"); a.className="axis axisY"; a.textContent=cap(r); g.appendChild(a);
     COLS.forEach(function(c){
       var id = r+"-"+c, b = document.createElement("button");
       b.className="loc";
@@ -562,20 +580,31 @@
     if(state.note) parts.push(noteLabel(state.note));
     return parts;
   }
+  function readyLine(p, l){
+    if(!p) return "";
+    var t = PITCHES.filter(function(x){return x.id===p;})[0].label;
+    if(l){ var rc=l.split("-"); t += " - " + locLabel(rc[0], rc[1]); }
+    return t;
+  }
+  function callStatusText(){
+    var extra = (messageText() || state.note) ? " + message" : "";
+    if(!state.pitch) return "Select a pitch" + extra;
+    return "Ready: " + readyLine(state.pitch, state.loc) + extra;
+  }
   function render(){
     Object.keys(pitchBtns).forEach(function(k){ pitchBtns[k].classList.toggle("sel", state.pitch===k); });
     Object.keys(locBtns).forEach(function(k){ locBtns[k].classList.toggle("sel", state.loc===k); });
-    var parts = callParts();
-    var pv = $("preview");
-    if(parts.length){ pv.textContent = parts.join(" "); pv.className=""; }
-    else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-"))+")" : "Select a pitch"; pv.className="empty"; }
+    if(statusEl && !statusEl.classList.contains("err")) statusEl.textContent = callStatusText();
     var sb = $("sendBtn");
-    var hasCall = !!(state.pitch || messageText() || state.note);
-    sb.disabled = state.playing || rec.active || !hasCall;
+    sb.disabled = state.playing || rec.active || !state.pitch;
     sb.textContent = state.playing ? "SENDING" : "SEND";
     sb.classList.toggle("playing", state.playing);
+    var nowBtn = $("sendMsgNow");
+    if(nowBtn) nowBtn.disabled = state.playing || rec.active || !(messageText() || state.note);
     $("msgClear").hidden = !$("customMsg").value;
     $("noteRow").hidden = !state.note;
+    var aa = $("aaBtn");
+    if(aa) aa.classList.toggle("has", !!(messageText() || state.note));
     if(state.note){
       var noteLabelText = "Voice note " + state.note.secs + "s";
       if(typeof state.note.peakDb === "number") noteLabelText += " (peak " + Math.round(state.note.peakDb) + " dB)";
@@ -694,7 +723,7 @@
   function unlock(e){
     if(fromRecButton(e)) return;
     ensureCtx();
-    if(loaded) setStatus("Ready - sound on");
+    if(loaded) render();
     // play one silent sample to fully unlock iOS output
     try{ var b=ctx.createBuffer(1,1,22050), s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0);}catch(e){}
     document.removeEventListener("pointerdown", unlock, true); document.removeEventListener("touchstart", unlock, true);
@@ -1101,22 +1130,47 @@
   }
 
   // ---------- Actions ----------
+  function buzz(pattern){ try { if(navigator.vibrate) navigator.vibrate(pattern); } catch(e){} }
+  function showToast(text){
+    var t = $("toast");
+    if(!t) return;
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function(){ t.hidden = true; }, 2000);
+  }
+  function flashSend(){
+    document.body.classList.add("flash");
+    clearTimeout(flashSend.timer);
+    flashSend.timer = setTimeout(function(){ document.body.classList.remove("flash"); }, 200);
+  }
+  function showMicOff(){
+    var b = $("micBanner");
+    if(!b) return;
+    b.hidden = false;
+    clearTimeout(showMicOff.timer);
+    showMicOff.timer = setTimeout(function(){ b.hidden = true; }, 2000);
+  }
+  function releaseNoteLater(note){
+    if(note && note.url){ try{ URL.revokeObjectURL(note.url); }catch(e){} }
+  }
   $("sendBtn").addEventListener("click", function(){
     $("customMsg").blur();
-    if(state.playing || rec.active) return;
+    if(state.playing || rec.active || !state.pitch) return;
     var msg = messageText();
-    if(!state.pitch && !msg && !state.note) return;
-    var p = state.pitch, l = state.loc, text = callParts().join(" "), note = state.note;
-    state.playing = true; render();
-    playCall(p, l, function(ok){
+    var p = state.pitch, l = state.loc, note = state.note;
+    var sent = readyLine(p, l);
+    buzz(40);
+    flashSend();
+    showToast("Sent: " + sent);
+    state.playing = true;
+    state.pitch = null; state.loc = null;
+    state.note = null;
+    $("customMsg").value = "";
+    render();
+    playCall(p, l, function(){
       state.playing = false;
-      if(ok){
-        var now = new Date(), hh = now.getHours()%12||12, mm = ("0"+now.getMinutes()).slice(-2);
-        $("lastSent").innerHTML = "Last sent: <b></b> at " + hh + ":" + mm;
-        $("lastSent").querySelector("b").textContent = text;
-        state.pitch = null; state.loc = null;
-        if(msg || note){ $("customMsg").value = ""; discardNote(); }
-      }
+      releaseNoteLater(note);
       render();
     }, {message: msg, note: note});
   });
@@ -1135,6 +1189,57 @@
   $("customMsg").addEventListener("input", function(){ render(); });
   $("msgClear").addEventListener("click", function(){ $("customMsg").value = ""; render(); });
   $("noteDelete").addEventListener("click", function(){ if(state.playing) return; discardNote(); render(); });
+  function placeMsgSheet(){
+    var panel = $("msgPanel");
+    var vv = window.visualViewport;
+    if(!panel) return;
+    if(!vv){ panel.style.maxHeight = "92dvh"; panel.style.marginBottom = "0px"; return; }
+    var keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    panel.style.marginBottom = keyboard + "px";
+    panel.style.maxHeight = Math.max(220, Math.min(vv.height * 0.92, vv.height - 8)) + "px";
+  }
+  function openMsg(){
+    $("msgSheet").classList.add("open");
+    placeMsgSheet();
+  }
+  function closeMsg(){
+    $("msgSheet").classList.remove("open");
+    var panel = $("msgPanel");
+    if(panel){ panel.style.marginBottom = "0px"; panel.style.maxHeight = "92dvh"; }
+    $("customMsg").blur();
+  }
+  $("aaBtn").addEventListener("click", function(){ openMsg(); });
+  $("closeMsg").addEventListener("click", closeMsg);
+  $("msgSheet").addEventListener("click", function(e){ if(e.target === $("msgSheet")) closeMsg(); });
+  $("addMsg").addEventListener("click", function(){
+    if(rec.active){ stopRecording(); }
+    closeMsg();
+    render();
+  });
+  $("sendMsgNow").addEventListener("click", function(){
+    if(state.playing || rec.active) return;
+    var msg = messageText();
+    var note = state.note;
+    if(!msg && !note) return;
+    var label = msg || "voice note";
+    buzz(40);
+    flashSend();
+    showToast("Sent: " + label);
+    state.playing = true;
+    state.note = null;
+    $("customMsg").value = "";
+    closeMsg();
+    render();
+    playCall(null, null, function(){
+      state.playing = false;
+      releaseNoteLater(note);
+      render();
+    }, {message: msg, note: note});
+  });
+  if(window.visualViewport){
+    visualViewport.addEventListener("resize", function(){ if($("msgSheet").classList.contains("open")) placeMsgSheet(); });
+    visualViewport.addEventListener("scroll", function(){ if($("msgSheet").classList.contains("open")) placeMsgSheet(); });
+  }
   $("notePlay").addEventListener("click", function(){
     if(!state.note || !state.note.buffer){ setStatus("Play error: no decoded note", true); return; }
     setAudioSession("playback");
@@ -1203,7 +1308,7 @@
     $("speechRate").value = settings.speechRate;
     $("rateVal").textContent = Number(settings.speechRate).toFixed(1);
     Array.prototype.forEach.call($("prerollType").children, function(b){ b.classList.toggle("sel", b.dataset.v===settings.prerollType); });
-    $("repeat").checked = settings.repeat; $("wake").checked = settings.wake; $("talkBeep").checked = !!settings.talkBeep;
+    $("repeat").checked = settings.repeat; $("wake").checked = settings.wake; $("talkBeep").checked = !!settings.talkBeep; $("talkToggle").checked = !!settings.talkToggle;
     fillVoices();
     syncVoiceUI();
   }
@@ -1228,6 +1333,7 @@
   $("repeat").addEventListener("change", function(e){ settings.repeat=e.target.checked; save(); });
   $("wake").addEventListener("change", function(e){ settings.wake=e.target.checked; save(); requestWake(); });
   $("talkBeep").addEventListener("change", function(e){ settings.talkBeep=e.target.checked; save(); });
+  $("talkToggle").addEventListener("change", function(e){ settings.talkToggle=e.target.checked; save(); });
   $("settingsBtn").addEventListener("click", function(){ syncSettingsUI(); $("settings").classList.add("open"); });
   $("closeSettings").addEventListener("click", function(){ $("settings").classList.remove("open"); });
   $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
@@ -1610,14 +1716,27 @@
   // One session token. pointerdown is the only start path so a second
   // touchstart/mousedown cannot leave an extra mic graph connected.
   var talk = {enabled:false, live:false, pressed:false, pointerId:null, captured:false, session:0, stream:null, source:null, comp:null, gain:null, analyser:null, chains:[]};
+  function talkReleaseEnds(why){
+    if(!settings.talkToggle) return true;
+    return why === "toggle" || why === "blur" || why === "visibilitychange" || why === "pointercancel" || why === "error" || why === "failsafe";
+  }
   function talkLabel(){
     var btn = $("talkBtn");
     var label = $("talkBtnLabel");
-    if(label) label.textContent = talk.enabled ? "Hold to Talk" : "Enable Talk";
-    btn.classList.toggle("live", !!talk.live);
-    btn.setAttribute("aria-pressed", talk.live ? "true" : "false");
+    var on = !!talk.live;
+    var holding = !!talk.pressed && !on;
+    if(label){
+      if(on) label.textContent = "LIVE - TALK";
+      else if(holding) label.textContent = "HOLDING...";
+      else label.textContent = "HOLD TO TALK";
+    }
+    btn.classList.toggle("holding", holding);
+    btn.classList.toggle("live", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    var banner = $("txBanner");
+    if(banner) banner.hidden = !on;
     var live = $("talkLive");
-    if(live) live.setAttribute("aria-hidden", talk.live ? "false" : "true");
+    if(live) live.setAttribute("aria-hidden", on ? "false" : "true");
   }
   function talkHasPath(){
     return !!(talk.live || talk.stream || talk.source || (talk.chains && talk.chains.length));
@@ -1686,9 +1805,12 @@
     try {
       var pointerId = talk.pointerId;
       talk.pressed = false;
+      talk.latched = false;
       talk.pointerId = null;
       talk.captured = false;
       talk.wantLive = false;
+      talk.live = false;
+      talkLabel();
       talk.session++;
       try {
         if(pointerId != null && talkBtn && talkBtn.hasPointerCapture && talkBtn.hasPointerCapture(pointerId)){
@@ -1764,15 +1886,19 @@
     talk.analyser = analyser;
     talk.live = true;
     meter.mode = "live";
+    buzz([25, 40, 40]);
     playTalkBeep();
     talkLabel();
   }
   function startTalk(){
     if(!talk.enabled || talk.pressed || state.playing || rec.active) return;
+    buzz(15);
     if(talkHasPath()) teardownTalk("prestart");
     var session = ++talk.session;
     talk.pressed = true;
+    talk.latched = !!settings.talkToggle;
     talk.wantLive = true;
+    talkLabel();
     setAudioSession("play-and-record");
     var AC = window.AudioContext || window.webkitAudioContext;
     if(!ctx || ctx.state === "closed") ctx = new AC({latencyHint:"interactive"});
@@ -1781,10 +1907,13 @@
     try { request = navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
     catch(e){
       talk.pressed = false;
+      talk.latched = false;
       talk.wantLive = false;
       talk.session++;
       micError(e);
+      showMicOff();
       setAudioSession("playback");
+      talkLabel();
       return;
     }
     request.then(function(stream){
@@ -1792,10 +1921,12 @@
     }).catch(function(e){
       if(session !== talk.session) return;
       talk.pressed = false;
+      talk.latched = false;
       talk.wantLive = false;
       talk.live = false;
       setAudioSession("playback");
       micError(e);
+      showMicOff();
       talkLabel();
     });
   }
@@ -1816,13 +1947,14 @@
       talk.enabled = true;
       setAudioSession("playback");
       talkLabel();
-      setStatus("Talk enabled. Hold the button to transmit.");
     }).catch(function(e){
       setAudioSession("playback");
       micError(e);
+      showMicOff();
     });
   }
   function talkFailsafe(){
+    if(settings.talkToggle && talk.latched) return;
     if(!talk.pressed && talkHasPath()) endTalk("failsafe");
   }
   var talkBtn = $("talkBtn");
@@ -1830,6 +1962,10 @@
   talkBtn.addEventListener("pointerdown", function(e){
     if(e.button !== undefined && e.button !== 0) return;
     if(!talk.enabled || state.playing || rec.active) return;
+    if(settings.talkToggle && (talk.pressed || talk.live || talk.latched)){
+      endTalk("toggle");
+      return;
+    }
     if(talk.pressed) return;
     e.preventDefault();
     talk.pointerId = e.pointerId;
@@ -1840,15 +1976,17 @@
     startTalk();
   }, {passive:false});
   function onTalkPointerRelease(e){
+    var why = e.type || "pointerup";
+    if(!talkReleaseEnds(why)) return;
     if(talk.pointerId != null && e.pointerId != null && e.pointerId !== talk.pointerId) return;
-    endTalk(e.type || "pointerup");
+    endTalk(why);
   }
   talkBtn.addEventListener("pointerup", onTalkPointerRelease);
   talkBtn.addEventListener("pointercancel", onTalkPointerRelease);
-  talkBtn.addEventListener("lostpointercapture", function(){ endTalk("lostpointercapture"); });
+  talkBtn.addEventListener("lostpointercapture", function(){ if(talkReleaseEnds("lostpointercapture")) endTalk("lostpointercapture"); });
   window.addEventListener("pointerup", onTalkPointerRelease, true);
   window.addEventListener("pointercancel", onTalkPointerRelease, true);
-  window.addEventListener("touchend", function(){ endTalk("touchend"); }, true);
+  window.addEventListener("touchend", function(){ if(talkReleaseEnds("touchend")) endTalk("touchend"); }, true);
   window.addEventListener("blur", function(){ endTalk("blur"); });
   talkBtn.addEventListener("contextmenu", function(e){ e.preventDefault(); });
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState !== "visible") endTalk("visibilitychange"); });
