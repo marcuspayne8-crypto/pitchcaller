@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0c10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Pitch Caller">
+<title>Pitch Caller</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+  :root{
+    --bg:#0a0c10; --panel:#161a22; --line:#2c3340; --text:#ffffff; --muted:#a9b3c4;
+    --sel:#ffd600; --selText:#000; --send:#00c853; --sendText:#000; --warn:#ff5252;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{display:flex; flex-direction:column; padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left)); gap:10px; overscroll-behavior:none; touch-action:manipulation;}
+  header{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  h1{font-size:20px; margin:0; letter-spacing:2px; font-weight:900;}
+  #status{font-size:14px; color:var(--muted); flex:1; text-align:center;}
+  #status.err{color:var(--warn); font-weight:700;}
+  button{font:inherit; color:var(--text); background:var(--panel); border:3px solid var(--line); border-radius:14px; cursor:pointer; touch-action:manipulation;}
+  button:active{transform:scale(0.98);}
+  .small{padding:10px 16px; font-size:16px; font-weight:700;}
+  main{flex:1; display:grid; gap:10px; grid-template-columns:1fr; grid-template-rows:1fr 1.3fr auto; min-height:0;}
+  @media (min-aspect-ratio: 1/1){ main{grid-template-columns:1fr 1fr; grid-template-rows:1fr auto;} #pitchBox{grid-column:1;grid-row:1;} #locBox{grid-column:2;grid-row:1;} #sendBox{grid-column:1 / span 2; grid-row:2;} }
+  section{display:flex; flex-direction:column; gap:8px; min-height:0;}
+  .label{font-size:13px; color:var(--muted); font-weight:800; letter-spacing:2px; text-transform:uppercase;}
+  #pitches{display:grid; grid-template-columns:1fr 1fr; gap:10px; flex:1;}
+  .pitch{font-size:clamp(22px,4.2vw,40px); font-weight:900; min-height:84px; padding:10px;}
+  #locGrid{display:grid; grid-template-columns:auto 1fr 1fr 1fr; grid-template-rows:auto 1fr 1fr 1fr; gap:8px; flex:1;}
+  .axis{font-size:12px; color:var(--muted); font-weight:800; display:flex; align-items:center; justify-content:center; letter-spacing:1px;}
+  .loc{font-size:clamp(14px,2.4vw,22px); font-weight:800; min-height:64px; padding:4px; line-height:1.15;}
+  .sel{background:var(--sel)!important; color:var(--selText)!important; border-color:#fff!important;}
+  #preview{font-size:clamp(20px,3.6vw,34px); font-weight:900; text-align:center; min-height:1.3em;}
+  #preview.empty{color:var(--muted); font-weight:700;}
+  #sendRow{display:grid; grid-template-columns:1fr 3fr; gap:10px;}
+  #clearBtn{font-size:22px; font-weight:900; min-height:90px;}
+  #sendBtn{font-size:clamp(34px,6vw,56px); font-weight:900; letter-spacing:4px; min-height:90px; background:var(--send); color:var(--sendText); border-color:#b9f6ca;}
+  #sendBtn:disabled{background:#1f2a22; color:#4d5b51; border-color:#2c3340;}
+  #sendBtn.playing{background:#ff9100; color:#000; border-color:#ffe0b2;}
+  #lastSent{font-size:16px; color:var(--muted); text-align:center; min-height:1.2em;}
+  #lastSent b{color:#fff;}
+  #settings{position:fixed; inset:0; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; padding:16px; z-index:10;}
+  #settings.open{display:flex;}
+  .sheet{background:var(--panel); border:3px solid var(--line); border-radius:16px; padding:18px; width:min(560px,100%); max-height:100%; overflow:auto; display:flex; flex-direction:column; gap:14px; user-select:text;}
+  .sheet h2{margin:0; font-size:22px;}
+  .row{display:flex; flex-direction:column; gap:6px;}
+  .row label{font-weight:800; font-size:16px;}
+  .row .hint{font-size:13px; color:var(--muted);}
+  .seg{display:flex; gap:8px;}
+  .seg button{flex:1; padding:12px; font-size:16px; font-weight:800;}
+  input[type=range]{width:100%; height:36px; accent-color:var(--sel);}
+  .sheetBtns{display:flex; gap:10px; flex-wrap:wrap;}
+  .sheetBtns button{flex:1; padding:14px; font-size:17px; font-weight:800;}
+  .toggle{display:flex; align-items:center; gap:10px; font-weight:800;}
+  .toggle input{width:28px; height:28px; accent-color:var(--sel);}
+</style>
+</head>
+<body>
+<header>
+  <h1>PITCH CALLER</h1>
+  <div id="status">Loading clips...</div>
+  <button class="small" id="settingsBtn" aria-label="Settings">Settings</button>
+</header>
+
+<main>
+  <section id="pitchBox">
+    <div class="label">1. Pitch</div>
+    <div id="pitches"></div>
+  </section>
+
+  <section id="locBox">
+    <div class="label">2. Location (optional)</div>
+    <div id="locGrid"></div>
+  </section>
+
+  <section id="sendBox">
+    <div id="preview" class="empty">Select a pitch</div>
+    <div id="sendRow">
+      <button id="clearBtn">CLEAR</button>
+      <button id="sendBtn" disabled>SEND</button>
+    </div>
+    <div id="lastSent"></div>
+  </section>
+</main>
+
+<div id="settings" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <h2>Settings</h2>
+
+    <div class="row">
+      <label>VOX pre-roll sound</label>
+      <div class="seg" id="prerollType">
+        <button data-v="off">Off</button>
+        <button data-v="noise">Soft noise</button>
+        <button data-v="tone">Soft tone</button>
+      </div>
+      <div class="hint">A short sound before the call so the radio's VOX keys up before the first word. Without it, the radio may cut off the start of "Fastball".</div>
+    </div>
+
+    <div class="row">
+      <label>Pre-roll length: <span id="prerollLenVal"></span> ms</label>
+      <input type="range" id="prerollLen" min="100" max="1000" step="50">
+    </div>
+
+    <div class="row">
+      <label>Pre-roll level: <span id="prerollLevelVal"></span>%</label>
+      <input type="range" id="prerollLevel" min="1" max="60" step="1">
+      <div class="hint">Raise this if the radio still clips the first word. Lower it if the catcher hears too much hiss.</div>
+    </div>
+
+    <div class="row">
+      <label>Gap between pitch and location: <span id="gapVal"></span> ms</label>
+      <input type="range" id="gap" min="0" max="600" step="20">
+    </div>
+
+    <div class="row">
+      <label>Voice volume: <span id="volVal"></span>%</label>
+      <input type="range" id="vol" min="10" max="150" step="5">
+    </div>
+
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="repeat"> Say each call twice</label>
+      <div class="hint">Plays the whole call a second time in case the catcher missed it.</div>
+    </div>
+
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="wake"> Keep screen awake</label>
+    </div>
+
+    <div class="sheetBtns">
+      <button id="testBtn">Test radio (plays "Fastball")</button>
+      <button id="resetBtn">Reset defaults</button>
+    </div>
+    <div class="sheetBtns">
+      <button id="closeSettings" style="background:var(--sel);color:#000;border-color:#fff;">Done</button>
+    </div>
+    <div class="hint" id="version"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var VERSION = "v1.0";
+  var PITCHES = [
+    {id:"fastball", label:"Fastball", say:"Fastball"},
+    {id:"curveball", label:"Curveball", say:"Curveball"},
+    {id:"changeup", label:"Change up", say:"Change up"},
+    {id:"splitfinger", label:"Split finger", say:"Split finger"}
+  ];
+  var ROWS = ["high","middle","low"];
+  var COLS = ["inside","middle","outside"];
+  function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+  function locLabel(r,c){ return (r==="middle"&&c==="middle") ? "Middle middle" : cap(r)+" "+c; }
+
+  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true};
+  var settings = Object.assign({}, DEFAULTS);
+  try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
+  function save(){ try{ localStorage.setItem("pc-settings", JSON.stringify(settings)); }catch(e){} }
+
+  var state = {pitch:null, loc:null, playing:false};
+  var ctx = null, buffers = {}, loaded = false, loadError = null;
+  var $ = function(id){return document.getElementById(id);};
+  var statusEl = $("status");
+  function setStatus(t, err){ statusEl.textContent = t; statusEl.className = err ? "err" : ""; }
+
+  // ---------- Build UI ----------
+  var pitchBtns = {};
+  PITCHES.forEach(function(p){
+    var b = document.createElement("button");
+    b.className = "pitch"; b.textContent = p.label;
+    b.addEventListener("click", function(){ state.pitch = (state.pitch===p.id) ? null : p.id; render(); });
+    $("pitches").appendChild(b); pitchBtns[p.id] = b;
+  });
+  var locBtns = {};
+  var g = $("locGrid");
+  g.appendChild(document.createElement("div"));
+  COLS.forEach(function(c){ var d=document.createElement("div"); d.className="axis"; d.textContent=c.toUpperCase(); g.appendChild(d); });
+  ROWS.forEach(function(r){
+    var a=document.createElement("div"); a.className="axis"; a.textContent=r.toUpperCase(); a.style.writingMode="vertical-rl"; a.style.transform="rotate(180deg)"; g.appendChild(a);
+    COLS.forEach(function(c){
+      var id = r+"-"+c, b = document.createElement("button");
+      b.className="loc"; b.textContent = locLabel(r,c);
+      b.addEventListener("click", function(){ state.loc = (state.loc===id) ? null : id; render(); });
+      g.appendChild(b); locBtns[id]=b;
+    });
+  });
+
+  function callText(p, l){
+    if(!p) return "";
+    var t = PITCHES.filter(function(x){return x.id===p;})[0].say;
+    if(l){ var rc=l.split("-"); t += ", " + locLabel(rc[0],rc[1]).toLowerCase(); }
+    return t;
+  }
+  function render(){
+    Object.keys(pitchBtns).forEach(function(k){ pitchBtns[k].classList.toggle("sel", state.pitch===k); });
+    Object.keys(locBtns).forEach(function(k){ locBtns[k].classList.toggle("sel", state.loc===k); });
+    var pv = $("preview");
+    if(state.pitch){ pv.textContent = callText(state.pitch, state.loc); pv.className=""; }
+    else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-")).toLowerCase()+")" : "Select a pitch"; pv.className="empty"; }
+    var sb = $("sendBtn");
+    sb.disabled = !state.pitch || state.playing || !!loadError;
+    sb.textContent = state.playing ? "SENDING" : "SEND";
+    sb.classList.toggle("playing", state.playing);
+  }
+
+  // ---------- Audio ----------
+  function clipNames(){ var n = PITCHES.map(function(p){return p.id;}); ROWS.forEach(function(r){COLS.forEach(function(c){n.push(r+"-"+c);});}); return n; }
+  function b64ToArrayBuffer(b64){ var bin=atob(b64), len=bin.length, u=new Uint8Array(len); for(var i=0;i<len;i++)u[i]=bin.charCodeAt(i); return u.buffer; }
+  function getClipData(name){
+    if(window.EMBEDDED_CLIPS && window.EMBEDDED_CLIPS[name]) return Promise.resolve(b64ToArrayBuffer(window.EMBEDDED_CLIPS[name]));
+    return fetch("clips/"+name+".mp3").then(function(r){ if(!r.ok) throw new Error(name+" "+r.status); return r.arrayBuffer(); });
+  }
+  function decode(ab){ return new Promise(function(res,rej){ var p = ctx.decodeAudioData(ab, res, rej); if(p && p.then) p.then(res,rej); }); }
+
+  function ensureCtx(){
+    createCtx();
+    if(ctx.state !== "running") ctx.resume();
+    return ctx;
+  }
+  function createCtx(){
+    if(!ctx){
+      try { if(navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
+      var AC = window.AudioContext || window.webkitAudioContext;
+      ctx = new AC({latencyHint:"interactive"});
+      loadAll();
+    }
+  }
+  function loadAll(){
+    var names = clipNames();
+    setStatus("Loading clips...");
+    Promise.all(names.map(function(n){ return getClipData(n).then(decode).then(function(b){ buffers[n]=b; }); }))
+      .then(function(){ loaded=true; setStatus("Ready - "+names.length+" clips loaded" + (ctx.state!=="running" ? " (tap to enable sound)" : "")); render(); })
+      .catch(function(e){ loadError=e; setStatus("Could not load clips: "+e.message, true); render(); });
+  }
+  // Create the context on first touch anywhere (required by iOS / Chrome autoplay rules).
+  function unlock(){ ensureCtx();
+    if(loaded) setStatus("Ready - sound on");
+    // play one silent sample to fully unlock iOS output
+    try{ var b=ctx.createBuffer(1,1,22050), s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0);}catch(e){}
+    document.removeEventListener("pointerdown", unlock, true); document.removeEventListener("touchstart", unlock, true);
+  }
+  document.addEventListener("pointerdown", unlock, true);
+  document.addEventListener("touchstart", unlock, true);
+  createCtx(); // decode clips right away; output unlocks on first tap
+
+  function makePreroll(seconds, type, level){
+    var sr = ctx.sampleRate, n = Math.max(1, Math.floor(sr*seconds)), buf = ctx.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    var fade = Math.min(Math.floor(sr*0.04), Math.floor(n/3));
+    var b0=0,b1=0,b2=0;
+    for(var i=0;i<n;i++){
+      var v;
+      if(type==="tone"){ v = Math.sin(2*Math.PI*440*i/sr); }
+      else { // pink-ish noise (soft hiss)
+        var w=Math.random()*2-1; b0=0.99765*b0+w*0.0990460; b1=0.96300*b1+w*0.2965164; b2=0.57000*b2+w*1.0526913;
+        v=(b0+b1+b2+w*0.1848)*0.25;
+      }
+      var env = 1; if(i<fade) env=i/fade; else if(i>n-fade) env=(n-i)/fade;
+      d[i] = v*level*env;
+    }
+    return buf;
+  }
+  // Schedules a sequence of buffers back-to-back; returns end time.
+  function schedule(list, t, out){
+    list.forEach(function(item){
+      if(item.gap){ t += item.gap; return; }
+      var s = ctx.createBufferSource(); s.buffer = item.buf; s.connect(item.raw ? ctx.destination : out); s.start(t); t += item.buf.duration;
+    });
+    return t;
+  }
+  function playCall(pitch, loc, done){
+    ensureCtx();
+    if(!loaded){ setStatus("Clips still loading, try again", true); if(done)done(false); return; }
+    var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
+    var seq = [];
+    if(settings.prerollType !== "off") seq.push({buf: makePreroll(settings.prerollLen/1000, settings.prerollType, settings.prerollLevel/100), raw:true});
+    var body = [{buf: buffers[pitch]}];
+    if(loc){ body.push({gap: settings.gap/1000}); body.push({buf: buffers[loc]}); }
+    seq = seq.concat(body);
+    if(settings.repeat){ seq.push({gap:0.45}); seq = seq.concat(body); }
+    var start = ctx.currentTime + 0.05;
+    var end = schedule(seq, start, out);
+    setTimeout(function(){ if(done) done(true); }, Math.ceil((end - ctx.currentTime)*1000) + 150);
+  }
+
+  // ---------- Actions ----------
+  $("sendBtn").addEventListener("click", function(){
+    if(!state.pitch || state.playing) return;
+    var p = state.pitch, l = state.loc, text = callText(p,l);
+    state.playing = true; render();
+    playCall(p, l, function(ok){
+      state.playing = false;
+      if(ok){
+        var now = new Date(), hh = now.getHours()%12||12, mm = ("0"+now.getMinutes()).slice(-2);
+        $("lastSent").innerHTML = "Last sent: <b></b> at " + hh + ":" + mm;
+        $("lastSent").querySelector("b").textContent = text;
+        state.pitch = null; state.loc = null;
+      }
+      render();
+    });
+  });
+  $("clearBtn").addEventListener("click", function(){ if(state.playing) return; state.pitch=null; state.loc=null; render(); });
+
+  // ---------- Settings ----------
+  function bindRange(id, key, valId){
+    var el=$(id); el.value = settings[key]; $(valId).textContent = settings[key];
+    el.addEventListener("input", function(){ settings[key]=+el.value; $(valId).textContent=el.value; save(); });
+  }
+  function syncSettingsUI(){
+    ["prerollLen","prerollLevel","gap","vol"].forEach(function(k){ $(k).value=settings[k]; $(k+"Val").textContent=settings[k]; });
+    Array.prototype.forEach.call($("prerollType").children, function(b){ b.classList.toggle("sel", b.dataset.v===settings.prerollType); });
+    $("repeat").checked = settings.repeat; $("wake").checked = settings.wake;
+  }
+  bindRange("prerollLen","prerollLen","prerollLenVal");
+  bindRange("prerollLevel","prerollLevel","prerollLevelVal");
+  bindRange("gap","gap","gapVal");
+  bindRange("vol","vol","volVal");
+  Array.prototype.forEach.call($("prerollType").children, function(b){
+    b.addEventListener("click", function(){ settings.prerollType=b.dataset.v; save(); syncSettingsUI(); });
+  });
+  $("repeat").addEventListener("change", function(e){ settings.repeat=e.target.checked; save(); });
+  $("wake").addEventListener("change", function(e){ settings.wake=e.target.checked; save(); requestWake(); });
+  $("settingsBtn").addEventListener("click", function(){ syncSettingsUI(); $("settings").classList.add("open"); });
+  $("closeSettings").addEventListener("click", function(){ $("settings").classList.remove("open"); });
+  $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
+  $("resetBtn").addEventListener("click", function(){ settings=Object.assign({},DEFAULTS); save(); syncSettingsUI(); });
+  $("version").textContent = "Pitch Caller " + VERSION + " - works offline after first load.";
+
+  // ---------- Screen wake lock ----------
+  var wakeLock = null;
+  function requestWake(){
+    if(!("wakeLock" in navigator)) return;
+    if(settings.wake && document.visibilityState==="visible"){ navigator.wakeLock.request("screen").then(function(l){wakeLock=l;}).catch(function(){}); }
+    else if(wakeLock){ wakeLock.release().catch(function(){}); wakeLock=null; }
+  }
+  document.addEventListener("visibilitychange", function(){ requestWake(); if(ctx && document.visibilityState==="visible" && ctx.state!=="running") ctx.resume(); });
+  document.addEventListener("click", function once(){ requestWake(); document.removeEventListener("click", once); });
+
+  // ---------- Offline ----------
+  if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("SW failed", e); }); });
+  }
+  render();
+})();
+</script>
+</body>
+</html>
