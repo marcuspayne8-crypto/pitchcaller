@@ -114,8 +114,10 @@
   #recBtn.rec{background:var(--brand); color:#fff;}
   #recLive{display:flex; align-items:center; gap:8px; min-height:18px; font-size:13px; font-weight:750; color:#fff;}
   .recDot{width:8px; height:8px; border-radius:50%; background:var(--brand); flex:none;}
+  #recMeter{flex:1; max-width:140px; height:8px; border-radius:99px; background:#2a2a2e; overflow:hidden;}
+  #recMeterBar{display:block; height:100%; width:0; background:var(--orange);}
   #noteRow{display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:700;}
-  #noteDelete{width:32px; height:32px; border-radius:10px;}
+  #notePlay, #noteDelete{width:32px; height:32px; border-radius:10px; padding:0; display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;}
   #preview{font-size:clamp(18px, 3.4vw, 30px); font-weight:750; text-align:center; min-height:1.25em; letter-spacing:-0.02em; line-height:1.2; max-height:2.6em; overflow:hidden;}
   #preview.empty{color:var(--muted); font-weight:600; font-size:clamp(16px, 3vw, 22px);}
   #sendRow{display:grid; grid-template-columns:minmax(104px,.72fr) 2.5fr; gap:12px;}
@@ -230,9 +232,12 @@
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
         </button>
       </div>
-      <div id="recLive" hidden><span class="recDot" aria-hidden="true"></span><span id="recTime">0:00</span></div>
+      <div id="recLive" hidden><span class="recDot" aria-hidden="true"></span><span id="recTime">0:00</span><span id="recMeter" aria-hidden="true"><span id="recMeterBar"></span></span></div>
       <div id="noteRow" hidden>
         <span id="noteText">Voice note</span>
+        <button type="button" id="notePlay" aria-label="Play voice note">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+        </button>
         <button type="button" id="noteDelete" aria-label="Delete voice note">
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>
         </button>
@@ -317,7 +322,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.7";
+  var VERSION = "v1.8";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -399,7 +404,11 @@
     sb.classList.toggle("playing", state.playing);
     $("msgClear").hidden = !$("customMsg").value;
     $("noteRow").hidden = !state.note;
-    if(state.note) $("noteText").textContent = "Voice note " + state.note.secs + "s";
+    if(state.note){
+      var noteLabelText = "Voice note " + state.note.secs + "s";
+      if(typeof state.note.peakDb === "number") noteLabelText += " (peak " + Math.round(state.note.peakDb) + " dB)";
+      $("noteText").textContent = noteLabelText;
+    }
   }
 
   // ---------- Audio ----------
@@ -523,6 +532,8 @@
   player.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;opacity:0;pointer-events:none";
   document.body.appendChild(player);
   var playerGen = 0;
+  var playStage = "start";
+  var playWatch = null;
   function playUrl(url, volume, next){
     var gen = ++playerGen;
     if(!url){ next(); return; }
@@ -652,6 +663,50 @@
     var message = (extra.message || "").trim();
     var note = extra.note || null;
     armPlayback();
+    playStage = "pre-roll";
+    clearTimeout(playWatch);
+    var expect = 3;
+    if(settings.prerollType !== "off") expect += settings.prerollLen / 1000;
+    if(pitch && buffers[pitch]) expect += buffers[pitch].duration * (settings.repeat ? 2 : 1);
+    if(pitch && loc && buffers[loc]) expect += (settings.gap / 1000 + buffers[loc].duration) * (settings.repeat ? 2 : 1);
+    if(message) expect += ((message.length * 0.1) / (settings.speechRate || 1) + 0.6) * (settings.repeat ? 2 : 1);
+    if(note && note.buffer) expect += note.buffer.duration;
+    else if(note) expect += note.secs || 2;
+    playWatch = setTimeout(function(){
+      if(!state.playing) return;
+      var media = player.error;
+      setStatus("Play stalled at " + playStage + " readyState=" + player.readyState + " networkState=" + player.networkState + " error=" + (media && (media.message || media.code) || "none"), true);
+      state.playing = false;
+      try { player.pause(); } catch(e){}
+      render();
+    }, (expect + 3) * 1000);
+    var armedNote = null;
+    if(note && note.buffer){
+      try {
+        var noteSrc = ctx.createBufferSource();
+        var noteGain = ctx.createGain();
+        noteGain.gain.value = Math.max(0, Math.min(1.5, settings.vol / 100));
+        noteSrc.buffer = note.buffer;
+        noteSrc.connect(noteGain);
+        noteGain.connect(ctx.destination);
+        var noteDelay = 0.08;
+        if(settings.prerollType !== "off") noteDelay += settings.prerollLen / 1000 + 0.08;
+        var clipOnce = 0;
+        if(pitch && buffers[pitch]) clipOnce += buffers[pitch].duration + 0.08;
+        if(pitch && loc && buffers[loc]) clipOnce += settings.gap / 1000 + buffers[loc].duration + 0.08;
+        var rounds = (settings.repeat && pitch) ? 2 : (pitch ? 1 : 0);
+        noteDelay += clipOnce * rounds;
+        if(rounds > 1) noteDelay += 0.45;
+        if(pitch && message) noteDelay += (settings.gap / 1000) * rounds;
+        if(message) noteDelay += ((message.length * 0.09) / (settings.speechRate || 1) + 0.55) * (settings.repeat ? 2 : 1);
+        if(pitch || message) noteDelay += settings.gap / 1000;
+        var noteWhen = ctx.currentTime + noteDelay;
+        noteSrc.start(noteWhen);
+        armedNote = {src: noteSrc, when: noteWhen, duration: note.buffer.duration};
+      } catch(err){
+        setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+      }
+    }
     if(pitch && (!clipUrl[pitch] || (loc && !clipUrl[loc]))){
       setStatus("Clips still loading, try again", true);
       if(!message && !note){ if(done) done(false); return; }
@@ -664,8 +719,9 @@
     var noteUrl = note && note.url;
     var prerollObjectUrl = settings.prerollType !== "off" ? makePrerollUrl() : "";
     function cleanup(){ if(prerollObjectUrl){ try{ URL.revokeObjectURL(prerollObjectUrl); }catch(e){} prerollObjectUrl = ""; } }
-    function finish(ok){ cleanup(); if(done) done(ok); }
+    function finish(ok){ clearTimeout(playWatch); cleanup(); if(done) done(ok); }
     function playClips(doneClips){
+      playStage = "clips";
       var queue = [];
       if(pitch){
         queue.push({url: clipUrl[pitch], gapAfter: loc ? settings.gap : 0});
@@ -680,11 +736,21 @@
       step();
     }
     function playNoteDone(){
+      playStage = "voice note";
+      if(armedNote){
+        var remain = Math.max(150, (armedNote.when + armedNote.duration - ctx.currentTime) * 1000 + 200);
+        var ended = false;
+        function doneNote(){ if(ended) return; ended = true; finish(true); }
+        try { armedNote.src.onended = doneNote; } catch(e){}
+        setTimeout(doneNote, remain + 800);
+        return;
+      }
       after((pitch || message) && noteUrl ? settings.gap : 0, function(){
         playUrl(noteUrl, null, function(){ finish(true); });
       });
     }
     function afterUtterance(index, next){
+      playStage = "message";
       if(!speech || !speech.utts[index]){ next(); return; }
       if(speech.paused && index === 0){
         try { speechSynthesis.resume(); }
@@ -749,6 +815,24 @@
   $("customMsg").addEventListener("input", function(){ render(); });
   $("msgClear").addEventListener("click", function(){ $("customMsg").value = ""; render(); });
   $("noteDelete").addEventListener("click", function(){ if(state.playing) return; discardNote(); render(); });
+  $("notePlay").addEventListener("click", function(){
+    if(!state.note || !state.note.buffer){ setStatus("Play error: no decoded note", true); return; }
+    setAudioSession("playback");
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!ctx || ctx.state === "closed") ctx = new AC({latencyHint:"interactive"});
+    try { ctx.resume(); } catch(e){}
+    try {
+      var src = ctx.createBufferSource();
+      var gain = ctx.createGain();
+      gain.gain.value = Math.max(0, Math.min(1.5, settings.vol / 100));
+      src.buffer = state.note.buffer;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(0);
+    } catch(err){
+      setStatus("Play error: " + ((err && err.name) || "Error") + (err && err.message ? " " + err.message : ""), true);
+    }
+  });
 
   // ---------- Settings ----------
   function bindRange(id, key, valId){
@@ -907,8 +991,15 @@
     src.start(0);
     return offline.startRendering().then(function(rendered){
       var pcm = rendered.getChannelData(0);
-      var peak = 0, i, s;
-      for(i=0;i<pcm.length;i++){ s = pcm[i] < 0 ? -pcm[i] : pcm[i]; if(s > peak) peak = s; }
+      var peak = 0, sum = 0, i, s;
+      for(i=0;i<pcm.length;i++){
+        s = pcm[i] < 0 ? -pcm[i] : pcm[i];
+        if(s > peak) peak = s;
+        sum += pcm[i] * pcm[i];
+      }
+      var rms = Math.sqrt(sum / (pcm.length || 1));
+      var peakDb = 20 * Math.log10(Math.max(peak, 1e-8));
+      var rmsDb = 20 * Math.log10(Math.max(rms, 1e-8));
       var gain = peak > 0.00001 ? 0.8912509381337456 / peak : 1;
       var out = new Float32Array(pcm.length);
       for(i=0;i<pcm.length;i++){
@@ -922,10 +1013,20 @@
         playBuf = ctx.createBuffer(1, out.length, rate);
         playBuf.getChannelData(0).set(out);
       } catch(e){ playBuf = rendered; }
-      return {wav: wav, buffer: playBuf, secs: rendered.duration};
+      return {wav: wav, buffer: playBuf, secs: rendered.duration, peakDb: peakDb, rmsDb: rmsDb};
     });
   }
-  function storeWavNote(packed, fallbackSecs){
+  function showCaptureStatus(path, mime, silent){
+    var line = "Captured via " + path + (mime ? " " + mime : "");
+    if(silent) line = "Recording was silent. " + line;
+    setStatus(line, !!silent);
+    if(!silent){
+      setTimeout(function(){
+        if(statusEl.textContent.indexOf("Captured via ") === 0) setStatus(loaded ? "Ready - sound on" : "");
+      }, 3000);
+    }
+  }
+  function storeWavNote(packed, fallbackSecs, path, mime){
     if(rec.discard){ rec.discard = false; return; }
     var url = URL.createObjectURL(new Blob([packed.wav], {type:"audio/wav"}));
     if(state.note && state.note.url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
@@ -933,12 +1034,64 @@
       url: url,
       buffer: packed.buffer,
       secs: Math.min(REC_MAX, Math.max(1, Math.round(packed.secs || fallbackSecs || 1))),
-      mime: "audio/wav"
+      mime: "audio/wav",
+      peakDb: packed.peakDb,
+      rmsDb: packed.rmsDb,
+      capturePath: path || "pcm"
     };
+    showCaptureStatus(path || "pcm", mime || "audio/wav", packed.peakDb < -50);
     render();
   }
-  function convertBufferToNote(audioBuffer, fallbackSecs){
-    return toPlayableWav(audioBuffer).then(function(packed){ storeWavNote(packed, fallbackSecs); });
+  function convertBufferToNote(audioBuffer, fallbackSecs, path, mime){
+    return toPlayableWav(audioBuffer).then(function(packed){ storeWavNote(packed, fallbackSecs, path, mime); });
+  }
+  function isIOS(){
+    var ua = navigator.userAgent || "";
+    if(/iPhone|iPad|iPod/i.test(ua)) return true;
+    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+  function updateMeter(){
+    var peak = rec.livePeak || 0;
+    if(rec.meter && rec.meterData){
+      rec.meter.getByteTimeDomainData(rec.meterData);
+      var i, v, p = 0;
+      for(i=0;i<rec.meterData.length;i++){
+        v = Math.abs(rec.meterData[i] - 128) / 128;
+        if(v > p) p = v;
+      }
+      if(p > peak) peak = p;
+    }
+    var db = peak > 0 ? 20 * Math.log10(peak) : -96;
+    var pct = Math.max(2, Math.min(100, (db + 48) / 48 * 100));
+    var bar = $("recMeterBar");
+    if(bar) bar.style.width = (isFinite(pct) ? pct : 2) + "%";
+  }
+  function startPcmCapture(stream){
+    ensureCtx();
+    try { ctx.resume(); } catch(e){}
+    rec.wavChunks = [];
+    rec.livePeak = 0;
+    rec.pcmRate = ctx.sampleRate;
+    rec.wavSource = ctx.createMediaStreamSource(stream);
+    rec.meter = ctx.createAnalyser();
+    rec.meter.fftSize = 512;
+    rec.meterData = new Uint8Array(rec.meter.fftSize);
+    rec.wavSource.connect(rec.meter);
+    rec.wavProc = ctx.createScriptProcessor(4096, 1, 1);
+    rec.wavProc.onaudioprocess = function(e){
+      if(!rec.active) return;
+      var input = e.inputBuffer.getChannelData(0);
+      rec.wavChunks.push(new Float32Array(input));
+      var peak = 0, i, a;
+      for(i=0;i<input.length;i++){ a = input[i] < 0 ? -input[i] : input[i]; if(a > peak) peak = a; }
+      if(peak > rec.livePeak) rec.livePeak = peak;
+      else rec.livePeak = rec.livePeak * 0.85 + peak * 0.15;
+    };
+    rec.mute = ctx.createGain();
+    rec.mute.gain.value = 0;
+    rec.wavSource.connect(rec.wavProc);
+    rec.wavProc.connect(rec.mute);
+    rec.mute.connect(ctx.destination);
   }
   function startWavCapture(stream){
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -956,10 +1109,12 @@
   }
   function finishWav(){
     var chunks = rec.wavChunks || [];
-    var rate = rec.wavCtx ? rec.wavCtx.sampleRate : 44100;
+    var rate = rec.pcmRate || (rec.wavCtx ? rec.wavCtx.sampleRate : (ctx ? ctx.sampleRate : 44100));
     var discard = rec.discard;
     try{ rec.wavProc.disconnect(); }catch(e){}
     try{ rec.wavSource.disconnect(); }catch(e){}
+    try{ rec.mute.disconnect(); }catch(e){}
+    rec.mute = null; rec.meter = null;
     var wavCtx = rec.wavCtx; rec.wavCtx = null; rec.wavProc = null; rec.wavSource = null; rec.wavChunks = null;
     if(wavCtx){ try{ wavCtx.close(); }catch(e){} }
     releaseMic();
@@ -974,7 +1129,7 @@
     var audioBuffer = ctx.createBuffer(1, pcm.length || 1, rate);
     audioBuffer.getChannelData(0).set(pcm);
     restorePlaybackRoute(function(){
-      convertBufferToNote(audioBuffer, secs).catch(function(e){
+      convertBufferToNote(audioBuffer, secs, "pcm", "audio/wav").catch(function(e){
         setStatus("Recording decode error: " + ((e && e.name) || "Error") + (e && e.message ? " " + e.message : ""), true);
       });
     });
@@ -991,7 +1146,7 @@
     var blob = new Blob(chunks, {type: mime});
     restorePlaybackRoute(function(){
       blob.arrayBuffer().then(function(ab){ return decodeArrayBuffer(ab); }).then(function(audioBuffer){
-        return convertBufferToNote(audioBuffer, secs);
+        return convertBufferToNote(audioBuffer, secs, "MediaRecorder", mime);
       }).catch(function(e){
         setStatus("Recording decode error: " + ((e && e.name) || "Error") + (e && e.message ? " " + e.message : ""), true);
       });
@@ -1008,7 +1163,7 @@
     $("recLive").hidden = true;
     if(rec.mode === "mr" && rec.recorder && rec.recorder.state !== "inactive"){
       try { rec.recorder.stop(); } catch(e){ releaseMic(); restorePlaybackRoute(); }
-    } else if(rec.mode === "wav") {
+    } else if(rec.mode === "wav" || rec.mode === "pcm") {
       finishWav();
     } else {
       releaseMic();
@@ -1035,8 +1190,24 @@
     updateRecTimer();
     rec.timer = setInterval(function(){
       updateRecTimer();
+      updateMeter();
       if((Date.now() - rec.startedAt) / 1000 >= REC_MAX) stopRecording();
-    }, 200);
+    }, 100);
+    if(isIOS()){
+      rec.mode = "pcm";
+      rec.mime = "audio/wav";
+      rec.capturePath = "pcm";
+      try { startPcmCapture(stream); }
+      catch(err){
+        rec.active = false;
+        releaseMic();
+        setStatus("Could not start recording: " + ((err && err.message) || err), true);
+        $("recLive").hidden = true;
+        $("recBtn").classList.remove("rec");
+      }
+      render();
+      return;
+    }
     var mime = pickMime();
     if(window.MediaRecorder){
       try {
@@ -1080,6 +1251,9 @@
     rec.discard = false;
     rec.cancelStart = false;
     rec.starting = true;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!ctx || ctx.state === "closed") ctx = new AC({latencyHint:"interactive"});
+    try { ctx.resume(); } catch(e){}
     try { if(navigator.audioSession) navigator.audioSession.type = "play-and-record"; } catch(e){}
     var request;
     try { request = navigator.mediaDevices.getUserMedia({audio:true}); }
