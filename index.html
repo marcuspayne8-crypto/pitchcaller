@@ -97,7 +97,26 @@
   .axis{font-size:11px; color:var(--muted); font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:0.12em;}
   .loc{font-size:clamp(13px, 2.2vw, 18px); font-weight:750; padding:4px 6px; line-height:1.15; min-height:0;}
   .sel{background:var(--orange)!important; color:var(--orange-ink)!important; box-shadow:0 8px 22px rgba(232,116,42,.28);}
-  #preview{font-size:clamp(22px, 4vw, 34px); font-weight:750; text-align:center; min-height:1.25em; letter-spacing:-0.02em;}
+  #composer{display:flex; flex-direction:column; gap:6px;}
+  #msgRow{display:flex; align-items:center; gap:8px;}
+  #customMsg{
+    flex:1; min-width:0; height:44px; border:0; border-radius:14px;
+    background:#1c1c21; color:#fff; padding:0 14px; font:inherit; font-size:16px;
+    user-select:text; -webkit-user-select:text;
+  }
+  #customMsg::placeholder{color:#8d8d96;}
+  #msgClear, #recBtn, #noteDelete{
+    width:44px; height:44px; flex:none; padding:0; border-radius:14px;
+    display:grid; place-items:center; background:#2a2a2e; color:#f3f3f5;
+  }
+  #msgClear[hidden], #recLive[hidden], #noteRow[hidden]{display:none !important;}
+  #recBtn{touch-action:none;}
+  #recBtn.rec{background:var(--brand); color:#fff;}
+  #recLive{display:flex; align-items:center; gap:8px; min-height:18px; font-size:13px; font-weight:750; color:#fff;}
+  .recDot{width:8px; height:8px; border-radius:50%; background:var(--brand); flex:none;}
+  #noteRow{display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; font-weight:700;}
+  #noteDelete{width:32px; height:32px; border-radius:10px;}
+  #preview{font-size:clamp(18px, 3.4vw, 30px); font-weight:750; text-align:center; min-height:1.25em; letter-spacing:-0.02em; line-height:1.2; max-height:2.6em; overflow:hidden;}
   #preview.empty{color:var(--muted); font-weight:600; font-size:clamp(16px, 3vw, 22px);}
   #sendRow{display:grid; grid-template-columns:minmax(104px,.72fr) 2.5fr; gap:12px;}
   #clearBtn{font-size:18px; font-weight:750; letter-spacing:0.08em; min-height:76px; background:#2a2a2e; color:#f3f3f5;}
@@ -148,6 +167,10 @@
   #closeSettings{background:var(--orange); color:var(--orange-ink); border-color:var(--orange);}
   .toggle{display:flex; align-items:center; gap:10px; font-weight:700;}
   .toggle input{width:24px; height:24px; accent-color:var(--orange);}
+  select{
+    font:inherit; font-size:16px; height:44px; border-radius:12px;
+    border:1px solid #d9d9e0; background:#fff; color:#17171a; padding:0 10px;
+  }
   @media (min-aspect-ratio: 1/1){
     body{padding:max(18px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left)); gap:14px;}
     .mark{width:64px; height:64px;}
@@ -197,6 +220,24 @@
   </section>
 
   <section id="sendBox">
+    <div id="composer">
+      <div id="msgRow">
+        <input id="customMsg" type="text" inputmode="text" enterkeyhint="done" maxlength="160" autocomplete="off" autocapitalize="sentences" placeholder="Custom message" aria-label="Custom message">
+        <button type="button" id="msgClear" aria-label="Clear message" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>
+        </button>
+        <button type="button" id="recBtn" aria-label="Record voice note" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+        </button>
+      </div>
+      <div id="recLive" hidden><span class="recDot" aria-hidden="true"></span><span id="recTime">0:00</span></div>
+      <div id="noteRow" hidden>
+        <span id="noteText">Voice note</span>
+        <button type="button" id="noteDelete" aria-label="Delete voice note">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>
+        </button>
+      </div>
+    </div>
     <div id="preview" class="empty">Select a pitch</div>
     <div id="sendRow">
       <button type="button" id="clearBtn">Clear</button>
@@ -243,8 +284,19 @@
     </div>
 
     <div class="row">
+      <label for="voiceSel">Message voice</label>
+      <select id="voiceSel"></select>
+      <div class="hint">Spoken on SEND after the pitch. English is used when it is available.</div>
+    </div>
+
+    <div class="row">
+      <label>Speech rate: <span id="rateVal"></span></label>
+      <input type="range" id="speechRate" min="0.7" max="1.3" step="0.1">
+    </div>
+
+    <div class="row">
       <label class="toggle"><input type="checkbox" id="repeat"> Say each call twice</label>
-      <div class="hint">Plays the whole call a second time in case the catcher missed it.</div>
+      <div class="hint">Plays the pitch, location, and typed message again. A voice note plays once.</div>
     </div>
 
     <div class="row">
@@ -265,7 +317,7 @@
 <script>
 (function(){
   "use strict";
-  var VERSION = "v1.2";
+  var VERSION = "v1.3";
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -277,13 +329,21 @@
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
   function locLabel(r,c){ return (r==="middle"&&c==="middle") ? "Middle middle" : cap(r)+" "+c; }
 
-  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true};
+  var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
   function save(){ try{ localStorage.setItem("pc-settings", JSON.stringify(settings)); }catch(e){} }
 
-  var state = {pitch:null, loc:null, playing:false};
+  if (typeof settings.speechRate !== "number" || !isFinite(settings.speechRate)) settings.speechRate = 1;
+  settings.speechRate = Math.min(1.3, Math.max(0.7, Math.round(settings.speechRate * 10) / 10));
+  if (typeof settings.voiceURI !== "string") settings.voiceURI = "";
+
+  var state = {pitch:null, loc:null, playing:false, note:null};
   var ctx = null, buffers = {}, loaded = false, loadError = null;
+  var routeDirty = false;
+  var REC_MAX = 15;
+  var TAP_MS = 280;
+  var rec = {active:false, pendingStop:false, discard:false, startedAt:0, pressAt:0, wasActive:false, stream:null, recorder:null, chunks:[], timer:null, mode:"", mime:"", wavCtx:null, wavProc:null, wavSource:null, wavChunks:null};
   var $ = function(id){return document.getElementById(id);};
   var statusEl = $("status");
   function setStatus(t, err){ statusEl.textContent = t; statusEl.className = err ? "err" : ""; }
@@ -316,16 +376,31 @@
     if(l){ var rc=l.split("-"); t += ", " + locLabel(rc[0],rc[1]).toLowerCase(); }
     return t;
   }
+  function messageText(){ return ($("customMsg").value || "").replace(/\s+/g, " ").trim(); }
+  function noteLabel(note){ return note ? "[voice note " + note.secs + "s]" : ""; }
+  function callParts(){
+    var parts = [];
+    if(state.pitch) parts.push(callText(state.pitch, state.loc));
+    var msg = messageText();
+    if(msg) parts.push(msg);
+    if(state.note) parts.push(noteLabel(state.note));
+    return parts;
+  }
   function render(){
     Object.keys(pitchBtns).forEach(function(k){ pitchBtns[k].classList.toggle("sel", state.pitch===k); });
     Object.keys(locBtns).forEach(function(k){ locBtns[k].classList.toggle("sel", state.loc===k); });
+    var parts = callParts();
     var pv = $("preview");
-    if(state.pitch){ pv.textContent = callText(state.pitch, state.loc); pv.className=""; }
+    if(parts.length){ pv.textContent = parts.join(" "); pv.className=""; }
     else { pv.textContent = state.loc ? "Select a pitch (location: "+locLabel.apply(null,state.loc.split("-")).toLowerCase()+")" : "Select a pitch"; pv.className="empty"; }
     var sb = $("sendBtn");
-    sb.disabled = !state.pitch || state.playing || !!loadError;
+    var blocked = state.playing || rec.active || (state.pitch && !!loadError);
+    sb.disabled = blocked || !parts.length;
     sb.textContent = state.playing ? "SENDING" : "SEND";
     sb.classList.toggle("playing", state.playing);
+    $("msgClear").hidden = !$("customMsg").value;
+    $("noteRow").hidden = !state.note;
+    if(state.note) $("noteText").textContent = "Voice note " + state.note.secs + "s";
   }
 
   // ---------- Audio ----------
@@ -392,7 +467,7 @@
     });
     return t;
   }
-  function playCall(pitch, loc, done){
+  function playClipsOnly(pitch, loc, done){
     ensureCtx();
     if(!loaded){ setStatus("Clips still loading, try again", true); if(done)done(false); return; }
     var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
@@ -406,11 +481,134 @@
     var end = schedule(seq, start, out);
     setTimeout(function(){ if(done) done(true); }, Math.ceil((end - ctx.currentTime)*1000) + 150);
   }
+  function restorePlaybackRoute(done){
+    try { if(navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
+    if(!routeDirty){
+      if(ctx && ctx.state !== "running"){
+        var resumed = ctx.resume();
+        if(resumed && resumed.then){ resumed.then(function(){ if(done) done(); }, function(){ if(done) done(); }); return; }
+      }
+      try{ if(ctx){ var kick=ctx.createBuffer(1,1,22050), ks=ctx.createBufferSource(); ks.buffer=kick; ks.connect(ctx.destination); ks.start(0);} }catch(e){}
+      if(done) done();
+      return;
+    }
+    routeDirty = false;
+    var old = ctx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC({latencyHint:"interactive"});
+    try{ var b=ctx.createBuffer(1,1,22050), s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0);}catch(e){}
+    if(old){ try{ old.close(); }catch(e){} }
+    if(ctx.state !== "running"){
+      var p = ctx.resume();
+      if(p && p.then){ p.then(function(){ if(done) done(); }, function(){ if(done) done(); }); return; }
+    }
+    if(done) done();
+  }
+  function pickVoice(){
+    var voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+    var i, v=null;
+    for(i=0;i<voices.length;i++){ if(voices[i].voiceURI === settings.voiceURI){ v=voices[i]; break; } }
+    if(!v){ for(i=0;i<voices.length;i++){ if(/^en/i.test(voices[i].lang)){ v=voices[i]; break; } } }
+    return v;
+  }
+  function speakText(text, next){
+    if(!text || !window.speechSynthesis){ next(); return; }
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = settings.speechRate || 1;
+    u.volume = Math.max(0, Math.min(1, settings.vol/100));
+    var voice = pickVoice();
+    if(voice) u.voice = voice;
+    var finished = false;
+    function finish(){ if(finished) return; finished = true; next(); }
+    var cap = Math.min(20000, Math.max(1200, text.length * 90 / (u.rate || 1) + 700));
+    var timer = setTimeout(finish, cap);
+    u.onend = function(){ clearTimeout(timer); finish(); };
+    u.onerror = function(){ clearTimeout(timer); finish(); };
+    try { speechSynthesis.cancel(); speechSynthesis.speak(u); }
+    catch(e){ clearTimeout(timer); finish(); }
+  }
+  function playBuffer(buffer, next){
+    var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
+    var s = ctx.createBufferSource(); s.buffer = buffer; s.connect(out);
+    var start = ctx.currentTime + 0.03; s.start(start);
+    setTimeout(next, Math.ceil(buffer.duration * 1000) + 80);
+  }
+  function playNote(note, next){
+    if(!note){ next(); return; }
+    if(note.raw){
+      decode(note.raw.slice(0)).then(function(buf){ playBuffer(buf, next); }).catch(function(){
+        if(note.url) playElement(note, next); else next();
+      });
+      return;
+    }
+    if(note.buffer) playBuffer(note.buffer, next);
+    else if(note.url) playElement(note, next);
+    else next();
+  }
+  function playElement(note, next){
+    var audio = new Audio(note.url);
+    try {
+      var node = ctx.createMediaElementSource(audio);
+      var g = ctx.createGain(); g.gain.value = Math.max(0, Math.min(2, settings.vol/100));
+      node.connect(g); g.connect(ctx.destination);
+    } catch(e){}
+    var done = false;
+    function finish(){ if(done) return; done = true; try{ audio.pause(); }catch(err){} next(); }
+    audio.onended = finish; audio.onerror = finish;
+    var play = audio.play();
+    if(play && play.catch) play.catch(finish);
+    setTimeout(finish, 16000);
+  }
+  function after(ms, next){ if(ms>0) setTimeout(next, ms); else next(); }
+  function scheduleBody(pitch, loc, includePreroll){
+    var out = ctx.createGain(); out.gain.value = settings.vol/100; out.connect(ctx.destination);
+    var seq = [];
+    if(includePreroll && settings.prerollType !== "off") seq.push({buf: makePreroll(settings.prerollLen/1000, settings.prerollType, settings.prerollLevel/100), raw:true});
+    if(pitch){
+      seq.push({buf: buffers[pitch]});
+      if(loc && buffers[loc]){ seq.push({gap: settings.gap/1000}); seq.push({buf: buffers[loc]}); }
+    }
+    if(!seq.length) return ctx.currentTime;
+    return schedule(seq, ctx.currentTime + 0.05, out);
+  }
+  function playCall(pitch, loc, done, extra){
+    extra = extra || {};
+    var message = (extra.message || "").trim();
+    var note = extra.note || null;
+    if(!message && !note){
+      if(!pitch){ if(done) done(false); return; }
+      if(!routeDirty){ playClipsOnly(pitch, loc, done); return; }
+      restorePlaybackRoute(function(){ playClipsOnly(pitch, loc, done); });
+      return;
+    }
+    if(pitch && !loaded){ setStatus("Clips still loading, try again", true); if(done) done(false); return; }
+    restorePlaybackRoute(function(){
+      var rounds = (settings.repeat && (pitch || message)) ? 2 : 1;
+      var round = 0;
+      function playRound(){
+        var end = scheduleBody(pitch, loc, round === 0);
+        var wait = Math.max(0, Math.ceil((end - ctx.currentTime) * 1000) + 40);
+        after(wait, function(){
+          after(pitch && message ? settings.gap : 0, function(){
+            speakText(message, function(){
+              round++;
+              if(round < rounds) after(450, playRound);
+              else after((pitch || message) && note ? settings.gap : 0, function(){ playNote(note, function(){ if(done) done(true); }); });
+            });
+          });
+        });
+      }
+      playRound();
+    });
+  }
 
   // ---------- Actions ----------
   $("sendBtn").addEventListener("click", function(){
-    if(!state.pitch || state.playing) return;
-    var p = state.pitch, l = state.loc, text = callText(p,l);
+    $("customMsg").blur();
+    if(state.playing || rec.active) return;
+    var msg = messageText();
+    if(!state.pitch && !msg && !state.note) return;
+    var p = state.pitch, l = state.loc, text = callParts().join(" "), note = state.note;
     state.playing = true; render();
     playCall(p, l, function(ok){
       state.playing = false;
@@ -421,24 +619,87 @@
         state.pitch = null; state.loc = null;
       }
       render();
-    });
+    }, {message: msg, note: note});
   });
-  $("clearBtn").addEventListener("click", function(){ if(state.playing) return; state.pitch=null; state.loc=null; render(); });
+  $("clearBtn").addEventListener("click", function(){
+    if(state.playing) return;
+    if(rec.active){ rec.discard = true; stopRecording(); }
+    else rec.discard = false;
+    state.pitch=null; state.loc=null;
+    $("customMsg").value = "";
+    discardNote();
+    render();
+  });
+  $("customMsg").addEventListener("keydown", function(e){
+    if(e.key === "Enter") e.preventDefault();
+  });
+  $("customMsg").addEventListener("input", function(){ render(); });
+  $("msgClear").addEventListener("click", function(){ $("customMsg").value = ""; render(); });
+  $("noteDelete").addEventListener("click", function(){ if(state.playing) return; discardNote(); render(); });
 
   // ---------- Settings ----------
   function bindRange(id, key, valId){
     var el=$(id); el.value = settings[key]; $(valId).textContent = settings[key];
     el.addEventListener("input", function(){ settings[key]=+el.value; $(valId).textContent=el.value; save(); });
   }
+  function fillVoices(){
+    var sel = $("voiceSel");
+    if(!sel || !window.speechSynthesis) return;
+    var voices = speechSynthesis.getVoices() || [];
+    var current = settings.voiceURI;
+    sel.innerHTML = "";
+    if(!voices.length){
+      var empty = document.createElement("option");
+      empty.value = ""; empty.textContent = "Default English";
+      sel.appendChild(empty);
+      return;
+    }
+    voices.slice().sort(function(a,b){
+      var ae = /^en/i.test(a.lang) ? 0 : 1, be = /^en/i.test(b.lang) ? 0 : 1;
+      if(ae !== be) return ae - be;
+      return (a.name || "").localeCompare(b.name || "");
+    }).forEach(function(v){
+      var o = document.createElement("option");
+      o.value = v.voiceURI;
+      o.textContent = v.name + " (" + v.lang + ")";
+      sel.appendChild(o);
+    });
+    var pick = "";
+    for(var i=0;i<voices.length;i++){ if(voices[i].voiceURI === current){ pick = current; break; } }
+    if(!pick){
+      var en = null;
+      for(var j=0;j<voices.length;j++){ if(/^en-US/i.test(voices[j].lang)){ en = voices[j]; break; } }
+      if(!en){ for(var k=0;k<voices.length;k++){ if(/^en/i.test(voices[k].lang)){ en = voices[k]; break; } } }
+      if(en) pick = en.voiceURI;
+    }
+    if(pick){
+      sel.value = pick;
+      if(pick !== settings.voiceURI){ settings.voiceURI = pick; save(); }
+    }
+  }
   function syncSettingsUI(){
     ["prerollLen","prerollLevel","gap","vol"].forEach(function(k){ $(k).value=settings[k]; $(k+"Val").textContent=settings[k]; });
+    $("speechRate").value = settings.speechRate;
+    $("rateVal").textContent = Number(settings.speechRate).toFixed(1);
     Array.prototype.forEach.call($("prerollType").children, function(b){ b.classList.toggle("sel", b.dataset.v===settings.prerollType); });
     $("repeat").checked = settings.repeat; $("wake").checked = settings.wake;
+    fillVoices();
   }
   bindRange("prerollLen","prerollLen","prerollLenVal");
   bindRange("prerollLevel","prerollLevel","prerollLevelVal");
   bindRange("gap","gap","gapVal");
   bindRange("vol","vol","volVal");
+  $("speechRate").addEventListener("input", function(){
+    settings.speechRate = Math.round(+this.value * 10) / 10;
+    $("rateVal").textContent = settings.speechRate.toFixed(1);
+    save();
+  });
+  $("voiceSel").addEventListener("change", function(){ settings.voiceURI = this.value; save(); });
+  if(window.speechSynthesis){
+    if(speechSynthesis.addEventListener) speechSynthesis.addEventListener("voiceschanged", fillVoices);
+    else speechSynthesis.onvoiceschanged = fillVoices;
+    fillVoices();
+  }
   Array.prototype.forEach.call($("prerollType").children, function(b){
     b.addEventListener("click", function(){ settings.prerollType=b.dataset.v; save(); syncSettingsUI(); });
   });
@@ -449,6 +710,192 @@
   $("testBtn").addEventListener("click", function(){ if(state.playing) return; state.playing=true; render(); playCall("fastball", null, function(){ state.playing=false; render(); }); });
   $("resetBtn").addEventListener("click", function(){ settings=Object.assign({},DEFAULTS); save(); syncSettingsUI(); });
   $("version").textContent = "Salt Lake Pitch Caller " + VERSION + " - works offline after first load.";
+
+  // ---------- Voice note ----------
+  function discardNote(){
+    if(state.note && state.note.url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
+    state.note = null;
+  }
+  function acceptNote(raw, blob, secs){
+    if(rec.discard){ rec.discard = false; return; }
+    var rounded = Math.min(REC_MAX, Math.max(1, Math.round(secs || 1)));
+    var url = blob ? URL.createObjectURL(blob) : null;
+    if(state.note && state.note.url && state.note.url !== url){ try{ URL.revokeObjectURL(state.note.url); }catch(e){} }
+    state.note = {raw: raw, url: url, secs: rounded};
+    render();
+  }
+  function pickMime(){
+    if(!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+    var types = ["audio/mp4","audio/aac","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"];
+    for(var i=0;i<types.length;i++){ try{ if(MediaRecorder.isTypeSupported(types[i])) return types[i]; }catch(e){} }
+    return "";
+  }
+  function encodeWav(chunks, sampleRate){
+    var len = 0, c, i;
+    for(c=0;c<chunks.length;c++) len += chunks[c].length;
+    var buffer = new ArrayBuffer(44 + len * 2);
+    var view = new DataView(buffer);
+    function writeStr(o, s){ for(var n=0;n<s.length;n++) view.setUint8(o+n, s.charCodeAt(n)); }
+    writeStr(0,"RIFF"); view.setUint32(4, 36 + len*2, true); writeStr(8,"WAVE");
+    writeStr(12,"fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate*2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    writeStr(36,"data"); view.setUint32(40, len*2, true);
+    var off = 44;
+    for(c=0;c<chunks.length;c++){
+      var ch = chunks[c];
+      for(i=0;i<ch.length;i++){
+        var sample = Math.max(-1, Math.min(1, ch[i]));
+        view.setInt16(off, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        off += 2;
+      }
+    }
+    return buffer;
+  }
+  function updateRecTimer(){
+    var s = Math.min(REC_MAX, Math.max(0, (Date.now() - rec.startedAt) / 1000));
+    var whole = Math.floor(s);
+    $("recTime").textContent = "0:" + (whole < 10 ? "0" : "") + whole;
+  }
+  function releaseMic(){
+    if(rec.stream){ rec.stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} }); rec.stream = null; }
+  }
+  function startWavCapture(stream){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    rec.wavCtx = new AC();
+    if(rec.wavCtx.state !== "running"){ try{ rec.wavCtx.resume(); }catch(e){} }
+    rec.wavChunks = [];
+    rec.wavSource = rec.wavCtx.createMediaStreamSource(stream);
+    rec.wavProc = rec.wavCtx.createScriptProcessor(4096, 1, 1);
+    rec.wavProc.onaudioprocess = function(e){
+      if(!rec.active) return;
+      rec.wavChunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    };
+    rec.wavSource.connect(rec.wavProc);
+    rec.wavProc.connect(rec.wavCtx.destination);
+  }
+  function finishWav(){
+    var chunks = rec.wavChunks || [];
+    var rate = rec.wavCtx ? rec.wavCtx.sampleRate : 44100;
+    var discard = rec.discard;
+    try{ rec.wavProc.disconnect(); }catch(e){}
+    try{ rec.wavSource.disconnect(); }catch(e){}
+    var wavCtx = rec.wavCtx; rec.wavCtx = null; rec.wavProc = null; rec.wavSource = null; rec.wavChunks = null;
+    if(wavCtx){ try{ wavCtx.close(); }catch(e){} }
+    releaseMic();
+    if(discard || !chunks.length){ rec.discard = false; restorePlaybackRoute(); return; }
+    var raw = encodeWav(chunks, rate);
+    var secs = (Date.now() - rec.startedAt) / 1000;
+    restorePlaybackRoute(function(){ acceptNote(raw, null, secs); });
+  }
+  function finishMediaRecorder(){
+    var chunks = rec.chunks || [];
+    var mime = rec.mime || (chunks[0] && chunks[0].type) || "audio/webm";
+    var discard = rec.discard;
+    var secs = (Date.now() - rec.startedAt) / 1000;
+    rec.chunks = [];
+    releaseMic();
+    if(discard || !chunks.length){ rec.discard = false; restorePlaybackRoute(); return; }
+    var blob = new Blob(chunks, {type: mime});
+    restorePlaybackRoute(function(){
+      blob.arrayBuffer().then(function(ab){
+        var raw = ab.slice(0);
+        decode(raw.slice(0)).then(function(){ acceptNote(raw, null, secs); }).catch(function(){ acceptNote(null, blob, secs); });
+      }).catch(function(){ setStatus("Could not use that recording", true); });
+    });
+  }
+  function stopRecording(){
+    if(!rec.active){ rec.pendingStop = true; return; }
+    rec.active = false;
+    rec.pendingStop = false;
+    if(rec.timer){ clearInterval(rec.timer); rec.timer = null; }
+    $("recBtn").classList.remove("rec");
+    $("recBtn").setAttribute("aria-pressed", "false");
+    $("recBtn").setAttribute("aria-label", "Record voice note");
+    $("recLive").hidden = true;
+    if(rec.mode === "mr" && rec.recorder && rec.recorder.state !== "inactive"){
+      try { rec.recorder.stop(); } catch(e){ releaseMic(); restorePlaybackRoute(); }
+    } else if(rec.mode === "wav") {
+      finishWav();
+    } else {
+      releaseMic();
+      restorePlaybackRoute();
+    }
+    render();
+  }
+  function beginCapture(stream){
+    if(rec.pendingStop || rec.discard){
+      stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
+      rec.pendingStop = false;
+      rec.discard = false;
+      return;
+    }
+    rec.stream = stream;
+    rec.active = true;
+    rec.startedAt = Date.now();
+    routeDirty = true;
+    $("recBtn").classList.add("rec");
+    $("recBtn").setAttribute("aria-pressed", "true");
+    $("recBtn").setAttribute("aria-label", "Stop recording");
+    $("recLive").hidden = false;
+    updateRecTimer();
+    rec.timer = setInterval(function(){
+      updateRecTimer();
+      if((Date.now() - rec.startedAt) / 1000 >= REC_MAX) stopRecording();
+    }, 200);
+    var mime = pickMime();
+    if(window.MediaRecorder){
+      try {
+        rec.recorder = mime ? new MediaRecorder(stream, {mimeType: mime}) : new MediaRecorder(stream);
+        rec.mode = "mr";
+        rec.mime = rec.recorder.mimeType || mime;
+        rec.chunks = [];
+        rec.recorder.ondataavailable = function(ev){ if(ev.data && ev.data.size) rec.chunks.push(ev.data); };
+        rec.recorder.onstop = function(){ finishMediaRecorder(); };
+        rec.recorder.start();
+        render();
+        return;
+      } catch(e){}
+    }
+    rec.mode = "wav";
+    try { startWavCapture(stream); }
+    catch(err){
+      rec.active = false;
+      releaseMic();
+      setStatus("Could not start recording", true);
+      $("recLive").hidden = true;
+      $("recBtn").classList.remove("rec");
+    }
+    render();
+  }
+  function startRecording(){
+    if(rec.active || state.playing) return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ setStatus("Microphone unavailable", true); return; }
+    rec.discard = false;
+    navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1}}).then(beginCapture).catch(function(){
+      setStatus("Microphone permission denied", true);
+    });
+  }
+  var recBtn = $("recBtn");
+  recBtn.addEventListener("pointerdown", function(e){
+    if(state.playing) return;
+    if(e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    try { recBtn.setPointerCapture(e.pointerId); } catch(err){}
+    rec.pressAt = Date.now();
+    rec.wasActive = rec.active;
+    rec.pendingStop = false;
+    if(!rec.active) startRecording();
+  });
+  recBtn.addEventListener("pointerup", function(){
+    var held = Date.now() - rec.pressAt >= TAP_MS;
+    if(rec.wasActive || held) stopRecording();
+  });
+  recBtn.addEventListener("pointercancel", function(){ if(rec.active && (Date.now() - rec.pressAt) >= TAP_MS) stopRecording(); });
+  recBtn.addEventListener("keydown", function(e){
+    if(e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    if(rec.active) stopRecording(); else startRecording();
+  });
 
   // ---------- Screen wake lock ----------
   var wakeLock = null;
