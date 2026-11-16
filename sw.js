@@ -1,8 +1,9 @@
-const CACHE = "pitchcaller-v1.0";
+const CACHE = "pitchcaller-v1.1";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
+  "fonts/yellowtail-latin.woff2",
   "icons/icon-180.png",
   "icons/icon-192.png",
   "icons/icon-512.png",
