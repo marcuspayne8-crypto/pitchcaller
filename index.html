@@ -37,16 +37,26 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
   html,body{margin:0; height:100%; background:var(--bg); color:var(--text);}
+  html{overflow:hidden;}
   body{
-    display:flex; flex-direction:column; min-height:100dvh; height:100dvh; overflow:hidden;
-    padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
-    gap:16px; overscroll-behavior:none; touch-action:manipulation;
+    display:flex; flex-direction:column;
+    height:100%;
+    height:100vh;
+    height:var(--app-h, 100svh);
+    overflow:hidden;
+    margin-top:var(--vv-top, 0px);
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      0
+      max(12px, env(safe-area-inset-left));
+    gap:8px; overscroll-behavior:none; touch-action:manipulation;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  header{display:flex; align-items:center; justify-content:space-between; gap:14px; flex:none;}
-  .brand{display:flex; align-items:center; gap:12px; min-width:0;}
-  .mark{width:56px; height:56px; flex:none; display:block; border-radius:50%;}
+  header{display:flex; align-items:center; justify-content:space-between; gap:10px; flex:none; min-width:0;}
+  .brand{display:flex; align-items:center; gap:10px; min-width:0; flex:1;}
+  .mark{width:48px; height:48px; flex:none; display:block; border-radius:50%;}
   .brandText{min-width:0;}
   h1{margin:0; font:inherit; min-width:0;}
   .team{
@@ -72,13 +82,18 @@
     color:#c8c8ce;
     -webkit-text-stroke:0;
   }
-  #status{font-size:12px; line-height:1.35; color:var(--muted); margin-top:4px; font-weight:600;}
+  #status{
+    font-size:12px; line-height:1.35; color:var(--muted); font-weight:600;
+    min-height:1.35em; max-height:4.05em; overflow:auto; text-align:center;
+    overflow-wrap:anywhere; flex:none;
+  }
   #status.err{color:var(--brand); font-weight:700;}
   button{
     font:inherit; color:var(--surface-text); background:var(--surface); border:0; border-radius:var(--radius);
     cursor:pointer; touch-action:manipulation;
   }
   button:active{transform:scale(0.985);}
+  #talkBtn:active{transform:none;}
   #settingsBtn{
     width:44px; height:44px; flex:none; padding:0; border-radius:50%;
     display:grid; place-items:center;
@@ -86,18 +101,53 @@
     border:1px solid rgba(255,255,255,.18);
   }
   #settingsBtn svg{display:block;}
-  main{
+  #stage{
     flex:1; min-height:0;
-    display:grid; grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) minmax(0,1.18fr) auto;
-    gap:16px;
+    overflow-x:hidden; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    display:flex; flex-direction:column; gap:8px;
   }
-  section{display:flex; flex-direction:column; gap:10px; min-height:0;}
+  #grids{
+    display:flex; flex-direction:column; gap:12px; flex:none; min-width:0;
+    padding-bottom:12px;
+  }
+  #dock{
+    position:sticky; bottom:0; z-index:5; flex:none;
+    display:flex; flex-direction:column; gap:6px;
+    background:var(--bg);
+    border-top:1px solid var(--line);
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  section{display:flex; flex-direction:column; gap:8px; flex:none; min-width:0;}
   .label{font-size:12px; color:var(--muted); font-weight:700; letter-spacing:0.16em; text-transform:uppercase;}
-  #pitches{display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:1; min-height:0;}
-  .pitch{font-size:clamp(20px, 4.6vw, 32px); font-weight:750; padding:8px; min-height:0;}
-  #locGrid{display:grid; grid-template-columns:auto 1fr 1fr 1fr; grid-template-rows:auto 1fr 1fr 1fr; gap:10px; flex:1; min-height:0;}
-  .axis{font-size:11px; color:var(--muted); font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:0.12em;}
-  .loc{font-size:clamp(13px, 2.2vw, 18px); font-weight:750; padding:4px 6px; line-height:1.15; min-height:0;}
+  #pitches{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%;}
+  .pitch{
+    min-height:56px; font-size:clamp(16px, 4.2vw, 28px); font-weight:750;
+    padding:8px 6px; line-height:1.1; text-align:center;
+    display:flex; align-items:center; justify-content:center;
+    white-space:normal;
+  }
+  #locGrid{
+    display:grid;
+    grid-template-columns:max-content repeat(3, minmax(0, 1fr));
+    grid-template-rows:auto repeat(3, minmax(44px, auto));
+    gap:6px; width:100%;
+  }
+  .axis{
+    font-size:10px; color:var(--muted); font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    letter-spacing:0.04em; white-space:nowrap; padding:0 2px;
+  }
+  .axisY{writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; letter-spacing:0.02em;}
+  .loc{
+    min-height:44px; font-size:clamp(11px, 2.7vw, 16px); font-weight:750;
+    padding:4px 3px; line-height:1.15; text-align:center;
+    display:flex; align-items:center; justify-content:center;
+    white-space:normal; overflow:visible;
+  }
+  .locFull,.locShort{pointer-events:none;}
+  .locShort{display:none;}
   .sel{background:var(--orange)!important; color:var(--orange-ink)!important; box-shadow:0 8px 22px rgba(232,116,42,.28);}
   #composer{display:flex; flex-direction:column; gap:6px;}
   #msgRow{display:flex; align-items:center; gap:8px;}
@@ -128,18 +178,34 @@
   #outMeter{flex:1; height:8px; border-radius:99px; background:#1c1c21; overflow:hidden;}
   #outMeterBar{display:block; height:100%; width:0; background:var(--orange);}
   #talkBtn{
-    min-height:76px; font-size:22px; font-weight:800; letter-spacing:0.04em;
+    height:64px; min-height:64px; max-height:64px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:0; padding:4px 12px;
     background:var(--orange); color:var(--orange-ink); border-radius:22px;
     touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
   }
+  #talkBtnLabel{
+    font-size:20px; font-weight:800; letter-spacing:0.04em; line-height:1;
+    height:22px; display:flex; align-items:center; justify-content:center;
+  }
   #talkBtn.live{background:var(--brand); color:#fff;}
-  #talkLive{display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:800; letter-spacing:0.14em; color:#fff;}
-  #talkLive[hidden]{display:none !important;}
-  #preview{font-size:clamp(18px, 3.4vw, 30px); font-weight:750; text-align:center; min-height:1.25em; letter-spacing:-0.02em; line-height:1.2; max-height:2.6em; overflow:hidden;}
-  #preview.empty{color:var(--muted); font-weight:600; font-size:clamp(16px, 3vw, 22px);}
+  #talkLive{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    height:16px; min-height:16px; max-height:16px;
+    font-size:11px; font-weight:800; letter-spacing:0.14em; color:#fff;
+    visibility:hidden;
+  }
+  #talkBtn.live #talkLive{visibility:visible;}
+  #preview{
+    font-size:16px; font-weight:750; text-align:center; letter-spacing:-0.02em;
+    line-height:1.25; min-height:1.25em; max-height:2.5em; overflow:hidden; flex:none;
+  }
+  #preview.empty{color:var(--muted); font-weight:600; font-size:15px;}
   #voiceBar{
-    display:flex; gap:6px; overflow-x:auto; flex:none; padding-bottom:2px;
+    display:flex; gap:6px; overflow-x:auto; overflow-y:hidden; flex:none; flex-wrap:nowrap;
+    min-width:0; padding-bottom:2px;
     -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    touch-action:pan-x;
   }
   #voiceBar::-webkit-scrollbar{display:none;}
   .voicePill{
@@ -147,15 +213,16 @@
     background:#1c1c21; color:#d7d7dc; border:1px solid #2e2e34;
   }
   .voicePill.on{background:var(--orange); color:var(--orange-ink); border-color:var(--orange);}
-  #sendRow{display:grid; grid-template-columns:minmax(104px,.72fr) 2.5fr; gap:12px;}
-  #clearBtn{font-size:18px; font-weight:750; letter-spacing:0.08em; min-height:76px; background:#2a2a2e; color:#f3f3f5;}
+  #sendRow{display:grid; grid-template-columns:minmax(96px,.72fr) 2.2fr; gap:8px; flex:none;}
+  #clearBtn{font-size:16px; font-weight:750; letter-spacing:0.06em; min-height:56px; line-height:1; background:#2a2a2e; color:#f3f3f5;}
   #sendBtn{
-    font-size:clamp(30px, 5.5vw, 48px); font-weight:800; letter-spacing:0.14em; min-height:76px;
+    font-size:clamp(22px, 5.5vw, 36px); font-weight:800; letter-spacing:0.12em; min-height:56px; line-height:1;
     background:var(--orange); color:var(--orange-ink);
   }
   #sendBtn:disabled{background:#232328; color:#6d6d76; box-shadow:none;}
   #sendBtn.playing{background:var(--brand); color:#fff;}
-  #lastSent{font-size:15px; color:var(--muted); text-align:center; min-height:1.2em; font-weight:600;}
+  #lastSent{font-size:13px; color:var(--muted); text-align:center; line-height:1.3; max-height:2.6em; overflow:hidden; font-weight:600; flex:none;}
+  #lastSent:empty{display:none;}
   #lastSent b{color:#fff; font-weight:750;}
   #settings{
     position:fixed; inset:0; z-index:20;
@@ -200,21 +267,29 @@
     font:inherit; font-size:16px; height:44px; border-radius:12px;
     border:1px solid #d9d9e0; background:#fff; color:#17171a; padding:0 10px;
   }
-  @media (min-aspect-ratio: 1/1){
-    body{padding:max(18px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left)); gap:14px;}
+  @media (max-width: 520px){
+    .loc{white-space:nowrap; font-size:12px; padding:4px 2px;}
+    .locFull{display:none;}
+    .locShort{display:inline;}
+  }
+  @media (min-width: 800px){
     .mark{width:64px; height:64px;}
-    main{grid-template-columns:1fr 1.08fr; grid-template-rows:minmax(0,1fr) auto; gap:16px 28px;}
-    #pitchBox{grid-column:1; grid-row:1;}
-    #locBox{grid-column:2; grid-row:1;}
-    #sendBox{grid-column:1 / -1; grid-row:2;}
-    .pitch{font-size:clamp(22px, 3vw, 36px);}
-    #sendBtn, #clearBtn{min-height:84px;}
+    body{padding-left:max(20px, env(safe-area-inset-left)); padding-right:max(20px, env(safe-area-inset-right)); gap:12px;}
+    .pitch{min-height:64px; font-size:clamp(20px, 2.4vw, 30px);}
+    .loc{min-height:52px; font-size:16px;}
+    #sendBtn, #clearBtn{min-height:64px;}
+    #talkBtn{height:72px; min-height:72px; max-height:72px;}
+  }
+  @media (min-width: 900px) and (min-height: 700px){
+    #grids{display:grid; grid-template-columns:1fr 1.08fr; gap:12px 28px; align-items:start;}
   }
   @media (max-height: 700px){
-    body{gap:10px;}
-    main{gap:10px;}
-    #sendBtn, #clearBtn{min-height:64px;}
-    .team{font-size:clamp(24px, 5.4vw, 36px);}
+    body{gap:6px;}
+    .team{font-size:clamp(22px, 5.6vw, 34px); -webkit-text-stroke:2px var(--orange);}
+    #sendBtn, #clearBtn{min-height:52px;}
+    #talkBtn{height:56px; min-height:56px; max-height:56px;}
+    #talkBtnLabel{font-size:18px; height:20px;}
+    #dock{gap:5px; padding-top:6px;}
   }
 </style>
 </head>
@@ -231,7 +306,6 @@
         <span id="appVersion"></span>
         <button type="button" id="updateBtn" hidden>Update available - tap to refresh</button>
       </div>
-      <div id="status">Loading clips...</div>
     </div>
   </div>
   <button type="button" id="settingsBtn" aria-label="Settings">
@@ -241,24 +315,27 @@
   </button>
 </header>
 <div id="voiceBar" role="radiogroup" aria-label="Clip voice"></div>
-<div id="outLevel">
-  <span id="outLevelLabel">Output level</span>
-  <span id="outMeter" aria-hidden="true"><span id="outMeterBar"></span></span>
-  <span id="outLevelMode"></span>
-</div>
 
-<main>
-  <section id="pitchBox">
-    <div class="label">Pitch</div>
-    <div id="pitches"></div>
-  </section>
+<main id="stage">
+  <div id="grids">
+    <section id="pitchBox">
+      <div class="label">Pitch</div>
+      <div id="pitches"></div>
+    </section>
 
-  <section id="locBox">
-    <div class="label">Location</div>
-    <div id="locGrid"></div>
-  </section>
+    <section id="locBox">
+      <div class="label">Location</div>
+      <div id="locGrid"></div>
+    </section>
+  </div>
+</main>
 
-  <section id="sendBox">
+<div id="dock">
+    <div id="outLevel">
+      <span id="outLevelLabel">Output level</span>
+      <span id="outMeter" aria-hidden="true"><span id="outMeterBar"></span></span>
+      <span id="outLevelMode"></span>
+    </div>
     <div id="composer">
       <div id="msgRow">
         <input id="customMsg" type="text" inputmode="text" enterkeyhint="done" maxlength="160" autocomplete="off" autocapitalize="sentences" placeholder="Custom message" aria-label="Custom message">
@@ -281,15 +358,17 @@
       </div>
     </div>
     <div id="preview" class="empty">Select a pitch</div>
+    <div id="status">Loading clips...</div>
     <div id="sendRow">
       <button type="button" id="clearBtn">Clear</button>
       <button type="button" id="sendBtn" disabled>SEND</button>
     </div>
-    <button type="button" id="talkBtn" aria-pressed="false">Enable Talk</button>
-    <div id="talkLive" hidden><span class="recDot" aria-hidden="true"></span><span>Live</span></div>
+    <button type="button" id="talkBtn" aria-pressed="false">
+      <span id="talkBtnLabel">Enable Talk</span>
+      <span id="talkLive" aria-hidden="true"><span class="recDot" aria-hidden="true"></span>Live</span>
+    </button>
     <div id="lastSent"></div>
-  </section>
-</main>
+</div>
 
 <div id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="sheet">
@@ -372,6 +451,22 @@
 <script>
 (function(){
   "use strict";
+  function fitViewport(){
+    var vv = window.visualViewport;
+    var h = vv ? vv.height : window.innerHeight;
+    var top = vv ? vv.offsetTop : 0;
+    var root = document.documentElement;
+    root.style.setProperty("--app-h", Math.round(h) + "px");
+    root.style.setProperty("--vv-top", Math.max(0, Math.round(top)) + "px");
+    var dock = document.getElementById("dock");
+    if(dock) root.style.setProperty("--dock-h", Math.ceil(dock.getBoundingClientRect().height) + "px");
+  }
+  fitViewport();
+  if(window.visualViewport){
+    visualViewport.addEventListener("resize", fitViewport);
+    visualViewport.addEventListener("scroll", fitViewport);
+  }
+  window.addEventListener("resize", fitViewport);
   var PITCHES = [
     {id:"fastball", label:"Fastball", say:"Fastball"},
     {id:"curveball", label:"Curveball", say:"Curveball"},
@@ -382,6 +477,12 @@
   var COLS = ["inside","middle","outside"];
   function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
   function locLabel(r,c){ return cap(r)+" "+cap(c); }
+  function locShort(r,c){
+    var row = r==="high" ? "High" : r==="low" ? "Low" : "Mid";
+    var col = c==="inside" ? "In" : c==="outside" ? "Out" : "Mid";
+    if(r==="middle" && c==="middle") return "Middle";
+    return row+" "+col;
+  }
 
   var CLIP_VOICES = [
     {id:"marcus", label:"Coach Marcus"},
@@ -390,7 +491,7 @@
     {id:"calm", label:"Calm"},
     {id:"cowboy", label:"Cowboy"}
   ];
-  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.1";
+  var VERSION = (typeof PITCHCALLER_VERSION === "string" && PITCHCALLER_VERSION) ? PITCHCALLER_VERSION : "v2.2";
   var DEFAULTS = {prerollType:"noise", prerollLen:300, prerollLevel:12, gap:120, vol:100, repeat:false, wake:true, voiceURI:"", speechRate:1, clipVoice:"marcus", talkBeep:false};
   var settings = Object.assign({}, DEFAULTS);
   try { Object.assign(settings, JSON.parse(localStorage.getItem("pc-settings")||"{}")); } catch(e){}
@@ -427,10 +528,13 @@
   g.appendChild(document.createElement("div"));
   COLS.forEach(function(c){ var d=document.createElement("div"); d.className="axis"; d.textContent=cap(c); g.appendChild(d); });
   ROWS.forEach(function(r){
-    var a=document.createElement("div"); a.className="axis"; a.textContent=cap(r); a.style.writingMode="vertical-rl"; a.style.transform="rotate(180deg)"; g.appendChild(a);
+    var a=document.createElement("div"); a.className="axis axisY"; a.textContent=cap(r); g.appendChild(a);
     COLS.forEach(function(c){
       var id = r+"-"+c, b = document.createElement("button");
-      b.className="loc"; b.textContent = locLabel(r,c);
+      b.className="loc";
+      var full=document.createElement("span"); full.className="locFull"; full.textContent=locLabel(r,c);
+      var brief=document.createElement("span"); brief.className="locShort"; brief.textContent=locShort(r,c);
+      b.appendChild(full); b.appendChild(brief);
       b.addEventListener("click", function(){ state.loc = (state.loc===id) ? null : id; render(); });
       g.appendChild(b); locBtns[id]=b;
     });
@@ -1503,32 +1607,98 @@
   });
 
   // ---------- Push to talk ----------
-  var talk = {enabled:false, live:false, stream:null, source:null, comp:null, gain:null, analyser:null, beep:null};
+  // One session token. pointerdown is the only start path so a second
+  // touchstart/mousedown cannot leave an extra mic graph connected.
+  var talk = {enabled:false, live:false, pressed:false, pointerId:null, captured:false, session:0, stream:null, source:null, comp:null, gain:null, analyser:null, chains:[]};
   function talkLabel(){
     var btn = $("talkBtn");
-    btn.textContent = talk.live ? "Live" : (talk.enabled ? "Hold to Talk" : "Enable Talk");
-    btn.classList.toggle("live", talk.live);
+    var label = $("talkBtnLabel");
+    if(label) label.textContent = talk.enabled ? "Hold to Talk" : "Enable Talk";
+    btn.classList.toggle("live", !!talk.live);
     btn.setAttribute("aria-pressed", talk.live ? "true" : "false");
-    $("talkLive").hidden = !talk.live;
+    var live = $("talkLive");
+    if(live) live.setAttribute("aria-hidden", talk.live ? "false" : "true");
   }
-  function stopTalkStream(){
-    if(talk.source){ try{ talk.source.disconnect(); }catch(e){} }
-    if(talk.comp){ try{ talk.comp.disconnect(); }catch(e){} }
-    if(talk.gain){ try{ talk.gain.disconnect(); }catch(e){} }
-    if(talk.analyser){ try{ talk.analyser.disconnect(); }catch(e){} }
-    talk.source = talk.comp = talk.gain = talk.analyser = null;
-    if(talk.stream){
-      talk.stream.getTracks().forEach(function(t){ try{ t.enabled = false; t.stop(); }catch(e){} });
-      talk.stream = null;
+  function talkHasPath(){
+    return !!(talk.live || talk.stream || talk.source || (talk.chains && talk.chains.length));
+  }
+  var stoppedTalkStreams = typeof WeakSet === "function" ? new WeakSet() : [];
+  function stopTalkTracks(stream, why){
+    if(!stream || typeof stream.getTracks !== "function") return;
+    if(stoppedTalkStreams instanceof WeakSet){
+      if(stoppedTalkStreams.has(stream)) return;
+      stoppedTalkStreams.add(stream);
+    } else if(stoppedTalkStreams.indexOf(stream) !== -1){
+      return;
+    } else {
+      stoppedTalkStreams.push(stream);
     }
+    stream.getTracks().forEach(function(track){
+      try { track.enabled = false; } catch(err){}
+      try { track.stop(); } catch(err){}
+      var state = track.readyState;
+      console.log("Pitch Caller talk release (" + why + "): " + (track.kind || "track") + " readyState=" + state);
+      if(state !== "ended"){
+        try { track.stop(); } catch(err){}
+        console.warn("Pitch Caller talk release (" + why + "): expected ended, readyState=" + track.readyState);
+      }
+    });
   }
-  function stopTalk(){
-    if(!talk.live && !talk.stream){ talkLabel(); return; }
+  function disconnectTalkNode(node){
+    if(!node) return;
+    try {
+      if(node.gain && node.gain.setValueAtTime && ctx) node.gain.setValueAtTime(0, ctx.currentTime);
+      else if(node.gain && typeof node.gain.value === "number") node.gain.value = 0;
+    } catch(err){}
+    try { node.disconnect(); } catch(err){}
+    if(node.mediaStream) stopTalkTracks(node.mediaStream, "source");
+  }
+  function teardownTalk(why){
+    var chains = talk.chains || [];
+    talk.chains = [];
+    chains.forEach(function(chain){
+      disconnectTalkNode(chain.source);
+      disconnectTalkNode(chain.comp);
+      disconnectTalkNode(chain.gain);
+      disconnectTalkNode(chain.analyser);
+      stopTalkTracks(chain.stream, why || "release");
+    });
+    disconnectTalkNode(talk.source);
+    disconnectTalkNode(talk.comp);
+    disconnectTalkNode(talk.gain);
+    disconnectTalkNode(talk.analyser);
+    stopTalkTracks(talk.stream, why || "release");
+    talk.source = talk.comp = talk.gain = talk.analyser = null;
+    talk.stream = null;
     talk.live = false;
-    stopTalkStream();
-    setAudioSession("playback");
+    talk.wantLive = false;
     if(meter.mode !== "tts") meter.mode = "idle";
+    if(!(rec.active || rec.starting)) setAudioSession("playback");
+    var sessionType = (navigator.audioSession && navigator.audioSession.type) || "playback";
+    console.log("Pitch Caller talk release (" + (why || "release") + "): mic path closed, audioSession=" + sessionType);
     talkLabel();
+  }
+  var talkEnding = false;
+  function endTalk(why){
+    if(talkEnding) return;
+    if(!talk.pressed && !talkHasPath()) return;
+    talkEnding = true;
+    try {
+      var pointerId = talk.pointerId;
+      talk.pressed = false;
+      talk.pointerId = null;
+      talk.captured = false;
+      talk.wantLive = false;
+      talk.session++;
+      try {
+        if(pointerId != null && talkBtn && talkBtn.hasPointerCapture && talkBtn.hasPointerCapture(pointerId)){
+          talkBtn.releasePointerCapture(pointerId);
+        }
+      } catch(err){}
+      teardownTalk(why || "release");
+    } finally {
+      talkEnding = false;
+    }
   }
   function playTalkBeep(){
     if(!settings.talkBeep || !ctx) return;
@@ -1547,34 +1717,61 @@
       osc.stop(t + 0.1);
     } catch(e){}
   }
-  function connectTalk(stream){
-    if(!talk.wantLive){ stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} }); return; }
+  function connectTalk(stream, session){
+    if(session !== talk.session || !talk.pressed){
+      stopTalkTracks(stream, "cancelled");
+      if(!talk.pressed && !(rec.active || rec.starting)) setAudioSession("playback");
+      return;
+    }
     ensureCtx();
     try { ctx.resume(); } catch(e){}
+    var source = ctx.createMediaStreamSource(stream);
+    if(session !== talk.session || !talk.pressed){
+      disconnectTalkNode(source);
+      stopTalkTracks(stream, "cancelled");
+      if(!(rec.active || rec.starting)) setAudioSession("playback");
+      return;
+    }
+    var comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -24;
+    comp.knee.value = 10;
+    comp.ratio.value = 2.2;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.12;
+    var gain = ctx.createGain();
+    gain.gain.value = 1.15;
+    var analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.35;
+    source.connect(comp);
+    comp.connect(gain);
+    gain.connect(analyser);
+    analyser.connect(outputNode());
+    if(session !== talk.session || !talk.pressed){
+      disconnectTalkNode(source);
+      disconnectTalkNode(comp);
+      disconnectTalkNode(gain);
+      disconnectTalkNode(analyser);
+      stopTalkTracks(stream, "cancelled");
+      if(!(rec.active || rec.starting)) setAudioSession("playback");
+      return;
+    }
+    talk.chains.push({session:session, stream:stream, source:source, comp:comp, gain:gain, analyser:analyser});
     talk.stream = stream;
-    talk.source = ctx.createMediaStreamSource(stream);
-    talk.comp = ctx.createDynamicsCompressor();
-    talk.comp.threshold.value = -24;
-    talk.comp.knee.value = 10;
-    talk.comp.ratio.value = 2.2;
-    talk.comp.attack.value = 0.004;
-    talk.comp.release.value = 0.12;
-    talk.gain = ctx.createGain();
-    talk.gain.gain.value = 1.15;
-    talk.analyser = ctx.createAnalyser();
-    talk.analyser.fftSize = 512;
-    talk.analyser.smoothingTimeConstant = 0.35;
-    talk.source.connect(talk.comp);
-    talk.comp.connect(talk.gain);
-    talk.gain.connect(talk.analyser);
-    talk.analyser.connect(outputNode());
+    talk.source = source;
+    talk.comp = comp;
+    talk.gain = gain;
+    talk.analyser = analyser;
     talk.live = true;
     meter.mode = "live";
     playTalkBeep();
     talkLabel();
   }
   function startTalk(){
-    if(!talk.enabled || talk.live || state.playing || rec.active) return;
+    if(!talk.enabled || talk.pressed || state.playing || rec.active) return;
+    if(talkHasPath()) teardownTalk("prestart");
+    var session = ++talk.session;
+    talk.pressed = true;
     talk.wantLive = true;
     setAudioSession("play-and-record");
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -1582,8 +1779,19 @@
     try { ctx.resume(); } catch(e){}
     var request;
     try { request = navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
-    catch(e){ talk.wantLive = false; micError(e); setAudioSession("playback"); return; }
-    request.then(connectTalk).catch(function(e){
+    catch(e){
+      talk.pressed = false;
+      talk.wantLive = false;
+      talk.session++;
+      micError(e);
+      setAudioSession("playback");
+      return;
+    }
+    request.then(function(stream){
+      connectTalk(stream, session);
+    }).catch(function(e){
+      if(session !== talk.session) return;
+      talk.pressed = false;
       talk.wantLive = false;
       talk.live = false;
       setAudioSession("playback");
@@ -1604,7 +1812,7 @@
     try { request = navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
     catch(e){ micError(e); setAudioSession("playback"); return; }
     request.then(function(stream){
-      stream.getTracks().forEach(function(t){ try{ t.stop(); }catch(err){} });
+      stopTalkTracks(stream, "enable");
       talk.enabled = true;
       setAudioSession("playback");
       talkLabel();
@@ -1614,24 +1822,40 @@
       micError(e);
     });
   }
+  function talkFailsafe(){
+    if(!talk.pressed && talkHasPath()) endTalk("failsafe");
+  }
   var talkBtn = $("talkBtn");
   talkBtn.addEventListener("click", function(){ if(!talk.enabled) enableTalk(); });
   talkBtn.addEventListener("pointerdown", function(e){
-    if(!talk.enabled || state.playing) return;
     if(e.button !== undefined && e.button !== 0) return;
+    if(!talk.enabled || state.playing || rec.active) return;
+    if(talk.pressed) return;
     e.preventDefault();
-    try { talkBtn.setPointerCapture(e.pointerId); } catch(err){}
+    talk.pointerId = e.pointerId;
+    try {
+      talkBtn.setPointerCapture(e.pointerId);
+      talk.captured = true;
+    } catch(err){ talk.captured = false; }
     startTalk();
-  });
-  function endTalkPointer(){ talk.wantLive = false; stopTalk(); }
-  talkBtn.addEventListener("pointerup", endTalkPointer);
-  talkBtn.addEventListener("pointercancel", endTalkPointer);
-  talkBtn.addEventListener("pointerleave", endTalkPointer);
+  }, {passive:false});
+  function onTalkPointerRelease(e){
+    if(talk.pointerId != null && e.pointerId != null && e.pointerId !== talk.pointerId) return;
+    endTalk(e.type || "pointerup");
+  }
+  talkBtn.addEventListener("pointerup", onTalkPointerRelease);
+  talkBtn.addEventListener("pointercancel", onTalkPointerRelease);
+  talkBtn.addEventListener("lostpointercapture", function(){ endTalk("lostpointercapture"); });
+  window.addEventListener("pointerup", onTalkPointerRelease, true);
+  window.addEventListener("pointercancel", onTalkPointerRelease, true);
+  window.addEventListener("touchend", function(){ endTalk("touchend"); }, true);
+  window.addEventListener("blur", function(){ endTalk("blur"); });
   talkBtn.addEventListener("contextmenu", function(e){ e.preventDefault(); });
-  document.addEventListener("visibilitychange", function(){ if(document.visibilityState !== "visible") endTalkPointer(); });
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState !== "visible") endTalk("visibilitychange"); });
   talkLabel();
 
   function paintLoop(){
+    talkFailsafe();
     paintMeter();
     requestAnimationFrame(paintLoop);
   }
